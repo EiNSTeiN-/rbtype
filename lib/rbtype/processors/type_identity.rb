@@ -1,6 +1,6 @@
 module Rbtype
   module Processors
-    class NativeTypeTagger < TaggerBase
+    class TypeIdentity < TaggerBase
       def on_str(node)
         updated(node, type_identity: Type::NativeType.new('String'))
       end
@@ -55,6 +55,21 @@ module Rbtype
 
       def on_rational(node)
         updated(node, type_identity: Type::NativeType.new('Rational'))
+      end
+
+      def on_lvasgn(node)
+        if (type_identity = node.children[1]&.type_identity)
+          updated(node, type_identity: type_identity)
+        end
+      end
+      alias_method :on_ivasgn, :on_lvasgn
+      alias_method :on_cvasgn, :on_lvasgn
+      alias_method :on_gvasgn, :on_lvasgn
+
+      def on_casgn(node)
+        if (type_identity = node.children[2]&.type_identity)
+          updated(node, type_identity: type_identity)
+        end
       end
     end
   end
