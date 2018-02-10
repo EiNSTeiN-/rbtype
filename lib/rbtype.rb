@@ -1,3 +1,13 @@
-module Rbtype
-  # Your code goes here...
-end
+require 'rbtype/ast/node'
+require 'rbtype/ast/processor'
+require 'rbtype/processors/tagger_base'
+require 'rbtype/processors/native_type_tagger'
+require 'rbtype/processors/class_instantiation_tagger'
+require 'rbtype/processors/assignment_tagger'
+require 'rbtype/type/class'
+require 'rbtype/type/method'
+require 'rbtype/type/native_type'
+require 'rbtype/type/string_type'
+require 'rbtype/engine'
+require 'rbtype/processed_source'
+require 'rbtype/version'
