@@ -1,0 +1,3 @@
+module Rbtype
+  # Your code goes here...
+end
