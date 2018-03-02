@@ -10,6 +10,8 @@ require_relative 'name_definitions'
 module Rbtype
   module Namespace
     class Resolver
+      attr_reader :hierarchy
+
       def initialize
         @hierarchy = NameHierarchy.new
       end

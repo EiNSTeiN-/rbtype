@@ -1,10 +1,10 @@
-require 'parser/current'
+require 'parser/ruby24'
 
 module Rbtype
   class Engine
     attr_reader :sources
 
-    def initialize(parser_klass: Parser::CurrentRuby)
+    def initialize(parser_klass: Parser::Ruby24)
       @parser_klass = parser_klass
       @sources = []
     end

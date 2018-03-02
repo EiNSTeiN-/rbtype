@@ -14,10 +14,13 @@ Gem::Specification.new do |s|
   s.description = "ruby type inference"
   s.license     = "MIT"
 
-  s.files = Dir["{app,config,db,lib}/**/*", "MIT-LICENSE", "Rakefile", "README.md"]
+  s.files = Dir["{app,config,db,lib,exe}/**/*", "MIT-LICENSE", "Rakefile", "README.md"]
+  s.bindir = 'exe'
+  s.executables = s.files.grep(%r{^exe/}) { |f| File.basename(f) }
 
   s.add_dependency "activesupport", "~> 5.1.4"
   s.add_dependency "parser"
+  s.add_dependency "colorize"
 
   s.add_development_dependency "rspec"
 end

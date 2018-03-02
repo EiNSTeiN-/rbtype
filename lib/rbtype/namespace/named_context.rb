@@ -19,6 +19,10 @@ module Rbtype
         @nesting = nesting
       end
 
+      def location
+        ast&.location&.expression
+      end
+
       def include_references
         context.select { |entry| entry.is_a?(IncludeReference) }
       end

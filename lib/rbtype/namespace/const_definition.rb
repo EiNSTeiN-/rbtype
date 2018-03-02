@@ -9,7 +9,7 @@ module Rbtype
         super(ast, name_ref, full_name_ref, nil, nil, nesting)
       end
 
-      def self.from_node(node, nesting: nesting)
+      def self.from_node(node, nesting:)
         if node.type == :casgn
           namespace_ref = if node.children[0]
             ConstReference.from_node(node.children[0])

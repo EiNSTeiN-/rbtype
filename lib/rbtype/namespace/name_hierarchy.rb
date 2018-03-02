@@ -1,10 +1,10 @@
 module Rbtype
   module Namespace
     class NameHierarchy
-      attr_reader :definitions
+      attr_reader :children, :definitions
 
       def initialize
-        @namedefs = []
+        @children = []
         @definitions = []
       end
 
@@ -15,13 +15,13 @@ module Rbtype
       def add_undefined(name)
         unless find(name)
           namedef = NameDefinitions.new(name)
-          @namedefs << namedef
+          @children << namedef
           namedef
         end
       end
 
       def find(wanted)
-        @namedefs.find { |namedef| namedef.name == wanted }
+        @children.find { |namedef| namedef.name == wanted }
       end
 
       def find_recursive(path)
