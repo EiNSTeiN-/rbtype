@@ -16,7 +16,7 @@ module Rbtype
 
       def eql?(other)
         super(other) &&
-          properties == other.properties
+          properties.eql?(other.properties)
       end
     end
   end
