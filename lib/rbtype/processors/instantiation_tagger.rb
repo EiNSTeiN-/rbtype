@@ -1,6 +1,6 @@
 module Rbtype
   module Processors
-    class ClassInstantiationTagger < TaggerBase
+    class InstantiationTagger < TaggerBase
       def on_send(node)
         return if node.type_identity
 

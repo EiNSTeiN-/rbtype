@@ -16,6 +16,8 @@ module Rbtype
     def run
       processor = Rbtype::AST::Processor.new([
         Rbtype::Processors::NativeTypeTagger.new,
+        Rbtype::Processors::ConstReferenceTagger.new,
+        Rbtype::Processors::InstanciationTagger.new,
       ])
       @sources.each do |source|
         processor.process_all(source.ast)

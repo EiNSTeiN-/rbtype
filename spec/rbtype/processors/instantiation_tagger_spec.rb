@@ -1,7 +1,7 @@
 require 'spec_helper'
 require 'rbtype'
 
-describe Rbtype::Processors::ClassInstantiationTagger do
+describe Rbtype::Processors::InstantiationTagger do
   let(:filename) { 'test.rb' }
   let(:buffer) do
     buffer = Parser::Source::Buffer.new(filename)
