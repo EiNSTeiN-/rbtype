@@ -18,7 +18,7 @@ Gem::Specification.new do |s|
   s.bindir = 'exe'
   s.executables = s.files.grep(%r{^exe/}) { |f| File.basename(f) }
 
-  s.add_dependency "activesupport", "~> 5.1.4"
+  s.add_dependency "activesupport"
   s.add_dependency "parser"
   s.add_dependency "colorize"
 
