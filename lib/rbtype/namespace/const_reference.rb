@@ -51,6 +51,11 @@ module Rbtype
       def ==(other)
         other.is_a?(ConstReference) && parts == other.parts
       end
+      alias_method :eql?, :==
+
+      def hash
+        parts.hash
+      end
 
       def join(other)
         other_const = wrap_array(other)

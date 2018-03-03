@@ -5,8 +5,8 @@ module Rbtype
     class NameDefinitions < NameHierarchy
       attr_reader :name
 
-      def initialize(name)
-        super()
+      def initialize(name, full_name)
+        super(full_name)
         @name = name
       end
     end

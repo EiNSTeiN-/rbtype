@@ -8,7 +8,7 @@ describe Rbtype::Processors::ConstReferenceTagger do
     buffer.source = source
     buffer
   end
-  let(:processed_source) { Rbtype::ProcessedSource.new(buffer, Parser::CurrentRuby) }
+  let(:processed_source) { Rbtype::ProcessedSource.new(buffer, Parser::Ruby24) }
   let(:ast) { processed_source.ast }
   let(:handlers) { [described_class.new] }
   let(:processor) { Rbtype::AST::Processor.new(handlers) }

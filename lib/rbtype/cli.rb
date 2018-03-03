@@ -6,6 +6,7 @@ require 'colorize'
 
 require_relative 'cli/describe'
 require_relative 'cli/nesting'
+require_relative 'cli/lint'
 
 module Rbtype
   class CLI
@@ -37,11 +38,7 @@ module Rbtype
       resolve_world(files)
 
       @actions.each do |action|
-        @targets.each do |target|
-          puts
-          puts "---- #{action} @ #{target} ----"
-          send("run_action_#{action}", target)
-        end
+        send("run_action_#{action}", @target)
       end
 
       true
@@ -79,14 +76,26 @@ module Rbtype
       Rbtype::ProcessedSource.new(buffer, ::Parser::Ruby24).ast
     end
 
-    def run_action_describe(target)
-      ref = build_const_name(target)
-      puts Describe.new(@resolver, ref)
+    def run_action_describe(targets)
+      targets.each do |target|
+        puts
+        puts "---- #{action} @ #{target} ----"
+        ref = build_const_name(target)
+        puts Describe.new(@resolver, ref)
+      end
     end
 
-    def run_action_nesting(target)
-      ref = build_const_name(target)
-      puts Nesting.new(@resolver, ref)
+    def run_action_nesting(targets)
+      targets.each do |target|
+        puts
+        puts "---- #{action} @ #{target} ----"
+        ref = build_const_name(target)
+        puts Nesting.new(@resolver, ref)
+      end
+    end
+
+    def run_action_lint(_)
+      puts Lint.new(@resolver)
     end
 
     def build_const_name(target)
@@ -135,6 +144,10 @@ module Rbtype
 
         opts.on("--describe", "Describe the target") do |config|
           @actions << :describe
+        end
+
+        opts.on("--lint", "Lint") do |config|
+          @actions << :lint
         end
 
         opts.on("--nesting", "Describe the target") do |config|

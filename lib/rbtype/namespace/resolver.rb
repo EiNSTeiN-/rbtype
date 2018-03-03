@@ -13,14 +13,14 @@ module Rbtype
       attr_reader :hierarchy
 
       def initialize
-        @hierarchy = NameHierarchy.new
+        @hierarchy = NameHierarchy.new(ConstReference.new([nil]))
       end
 
       def self.from_node(node, context:, nesting: nil)
-        namespace = new
+        resolver = new
         nesting ||= [ConstReference.new([nil])]
-        namespace.process(node, context, nesting)
-        namespace
+        resolver.process(node, context, nesting)
+        resolver
       end
 
       def process(node, context, nesting)
@@ -50,12 +50,21 @@ module Rbtype
 
       def define_hierarchy(defn)
         path = defn.definition_path.without_explicit_base
-        where = path.empty? ? @hierarchy : @hierarchy.define_recursive(path)
-        where.define(defn.definition_name, defn)
+        where = path.empty? ? @hierarchy : @hierarchy.define_recursive(path, reference: defn)
+        where.define(defn.definition_name, definition: defn)
       end
 
       def resolve_definitions(path)
-        @hierarchy.find_recursive(path)&.definitions
+        @hierarchy.find_recursive(path.without_explicit_base)&.definitions
+      end
+
+      def resolve_with_nesting(what, nesting)
+        return if nesting.size <= 1
+        path = nesting[1..nesting.size].find do |path|
+          defs = resolve_definitions(path.join(what))
+          defs && defs.size >= 1
+        end
+        path.join(what) if path
       end
 
       private

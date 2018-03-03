@@ -1,3 +1,4 @@
+class String; end
 
 module Test
   class Foo

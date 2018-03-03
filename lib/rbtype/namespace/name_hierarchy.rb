@@ -1,11 +1,13 @@
 module Rbtype
   module Namespace
     class NameHierarchy
-      attr_reader :children, :definitions
+      attr_reader :children, :definitions, :references, :full_name
 
-      def initialize
+      def initialize(full_name)
         @children = []
         @definitions = []
+        @references = Set.new
+        @full_name = full_name
       end
 
       def append_definition(definition)
@@ -14,7 +16,7 @@ module Rbtype
 
       def add_undefined(name)
         unless find(name)
-          namedef = NameDefinitions.new(name)
+          namedef = NameDefinitions.new(name, full_name.join(name))
           @children << namedef
           namedef
         end
@@ -35,15 +37,16 @@ module Rbtype
         end
       end
 
-      def define(name, definition = nil)
+      def define(name, definition: nil, reference: nil)
         namedef = find(name) || add_undefined(name)
+        namedef.references << reference if reference
         namedef.append_definition(definition) if definition
         namedef
       end
 
-      def define_recursive(path)
+      def define_recursive(path, reference: nil)
         name = path[0]
-        namedef = define(name)
+        namedef = define(name, reference: reference)
         if path.size > 1
           namedef.define_recursive(path[1..path.size])
         else

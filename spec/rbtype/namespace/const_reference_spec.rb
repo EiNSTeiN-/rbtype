@@ -9,7 +9,7 @@ describe Rbtype::Namespace::ConstReference do
       buffer.source = source
       buffer
     end
-    let(:processed_source) { Rbtype::ProcessedSource.new(buffer, ::Parser::CurrentRuby) }
+    let(:processed_source) { Rbtype::ProcessedSource.new(buffer, ::Parser::Ruby24) }
     let(:ast) { processed_source.ast }
     let(:ref) { described_class.from_node(ast) }
     subject { ref }

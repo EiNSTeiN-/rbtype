@@ -8,7 +8,7 @@ describe Rbtype::Namespace::Resolver do
     buffer.source = source
     buffer
   end
-  let(:processed_source) { Rbtype::ProcessedSource.new(buffer, ::Parser::CurrentRuby) }
+  let(:processed_source) { Rbtype::ProcessedSource.new(buffer, ::Parser::Ruby24) }
   let(:ast) { processed_source.ast }
   let(:context) { Rbtype::Namespace::Context.new }
   let(:resolver) { described_class.from_node(ast, context: context) }
@@ -88,7 +88,7 @@ describe Rbtype::Namespace::Resolver do
     it { expect(resolver.resolve_definitions(const_ref(:Foo)).size).to eq(2) }
     it { expect(resolver.resolve_definitions(const_ref(:Foo))[0].class).to eq(Rbtype::Namespace::ClassDefinition) }
     it { expect(resolver.resolve_definitions(const_ref(:Foo))[1].class).to eq(Rbtype::Namespace::ModuleDefinition) }
-    it { expect(resolver.resolve_definitions([:Any, :Foo])).to eq(nil) }
+    it { expect(resolver.resolve_definitions(const_ref(:Any, :Foo))).to eq(nil) }
   end
 
   context 'class with superclass' do
