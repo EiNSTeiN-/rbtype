@@ -51,7 +51,7 @@ module Rbtype
       end
 
       def inheritance_info
-        superclasses = definitions.map(&:superclass_ref).uniq
+        superclasses = definitions.map { |defn| defn.superclass_expr&.const_reference }.uniq
         if superclasses.size == 1
           superclass = superclasses.first
           if superclass == nil

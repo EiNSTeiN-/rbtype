@@ -5,16 +5,16 @@ require_relative 'include_reference'
 module Rbtype
   module Namespace
     class NamedContext
-      attr_reader :ast, :name_ref, :superclass_ref, :context, :nesting, :full_name_ref
+      attr_reader :ast, :name_ref, :superclass_expr, :context, :nesting, :full_name_ref
 
-      def initialize(ast, name_ref, full_name_ref, superclass_ref, context, nesting)
+      def initialize(ast, name_ref, full_name_ref, superclass_expr, context, nesting)
         raise 'name must be given' unless name_ref
         raise 'full name must be given' unless full_name_ref
         raise 'nesting from cbase must be given' unless nesting && nesting.size > 0
         @ast = ast
         @name_ref = name_ref
         @full_name_ref = full_name_ref
-        @superclass_ref = superclass_ref
+        @superclass_expr = superclass_expr
         @context = context
         @nesting = nesting
       end
@@ -47,12 +47,12 @@ module Rbtype
         context = Context.new
         name_node = node.children[0]
         name_ref = ConstReference.from_node(name_node)
-        superclass_ref = if node.type == :class
-          ConstReference.from_node(node.children[1]) if node.children[1]
+        superclass_expr = if node.type == :class && node.children[1]
+          Expression.from_node(node.children[1]) if node.children[1]
         end
         new_nesting = [nesting.first.join(name_ref), *nesting]
         full_name_ref = new_nesting.first
-        obj = new(node, name_ref, full_name_ref, superclass_ref, context, new_nesting)
+        obj = new(node, name_ref, full_name_ref, superclass_expr, context, new_nesting)
         resolver.process(node.children, context, new_nesting)
         obj
       end

@@ -15,7 +15,7 @@ module Rbtype
       private
 
       def check_superclass(name, definition)
-        return unless superclass = definition.superclass_ref
+        return unless superclass = definition.superclass_expr&.const_reference
         resolved = @resolver.resolve_with_nesting(superclass, definition.nesting)
         if resolved == nil
           add_error(name,

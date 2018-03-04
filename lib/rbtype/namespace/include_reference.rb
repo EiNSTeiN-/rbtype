@@ -11,10 +11,13 @@ module Rbtype
 
       def self.from_node(node)
         if node.type == :send
-          target_ref = ConstReference.from_node(node.children[2])
-          new(target_ref)
+          if [:const, :cbase].include?(node.children[2].type)
+            target_ref = ConstReference.from_node(node.children[2])
+            new(target_ref)
+          end
         else
-          raise ArgumentError, "cannot build name for #{node.type} node"
+          loc = node.location.expression
+          raise ArgumentError, "cannot build name for #{node.type} node at #{loc.source_buffer.name}:#{loc.line}"
         end
       end
 

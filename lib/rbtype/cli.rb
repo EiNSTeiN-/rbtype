@@ -63,15 +63,28 @@ module Rbtype
       @resolver = Rbtype::Namespace::Resolver.new
       nesting_root = Rbtype::Namespace::ConstReference.new([nil])
       files.each do |filename|
-        ast = parse_file(filename)
-        file_context = Rbtype::Namespace::Context.new
-        @resolver.process(ast, file_context, [nesting_root])
+        begin
+          ast = parse_file(filename)
+          if ast
+            file_context = Rbtype::Namespace::Context.new
+            @resolver.process(ast, file_context, [nesting_root])
+          else
+            warn "Could not parse into AST: #{relative_filename(filename)}".red
+          end
+        rescue => e
+          warn "Error while parsing parsing: #{relative_filename(filename)}".red
+          raise
+        end
       end
     end
 
     def parse_file(filename)
+      raw_content = File.read(filename)
+      unless raw_content.encoding == Encoding::UTF_8
+        raw_content.force_encoding(Encoding::UTF_8)
+      end
       buffer = ::Parser::Source::Buffer.new(relative_filename(filename))
-      buffer.source = File.read(filename)
+      buffer.source = raw_content
       buffer
       Rbtype::ProcessedSource.new(buffer, ::Parser::Ruby24).ast
     end

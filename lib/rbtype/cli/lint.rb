@@ -7,7 +7,7 @@ module Rbtype
         @classes = [
           Rbtype::Lint::ConflictingDefinition.new(@resolver),
           Rbtype::Lint::MissingDefinition.new(@resolver),
-          Rbtype::Lint::UnresolvedReference.new(@resolver),
+          #Rbtype::Lint::UnresolvedReference.new(@resolver),
         ]
       end
 

@@ -59,13 +59,13 @@ describe Rbtype::Namespace::Resolver do
     it { expect(subject[0].class).to eq(Rbtype::Namespace::ClassDefinition) }
     it { expect(subject[0].name_ref).to eq(const_ref(:Foo)) }
     it { expect(subject[0].nesting).to eq([const_ref(nil, :Foo), const_ref(nil)]) }
-    it { expect(subject[0].superclass_ref).to eq(nil) }
+    it { expect(subject[0].superclass_expr).to eq(nil) }
     it { expect(subject[0].definition_path).to eq(const_ref(nil)) }
     it { expect(subject[0].definition_name).to eq(const_ref(:Foo)) }
     it { expect(subject[1].class).to eq(Rbtype::Namespace::ClassDefinition) }
     it { expect(subject[1].name_ref).to eq(const_ref(:Bar)) }
     it { expect(subject[1].nesting).to eq([const_ref(nil, :Bar), const_ref(nil)]) }
-    it { expect(subject[1].superclass_ref).to eq(nil) }
+    it { expect(subject[1].superclass_expr).to eq(nil) }
     it { expect(resolver.resolve_definitions(const_ref(:Foo))).to eq([subject[0]]) }
   end
 
@@ -96,7 +96,7 @@ describe Rbtype::Namespace::Resolver do
     it { expect(subject.size).to eq(1) }
     it { expect(subject[0].class).to eq(Rbtype::Namespace::ClassDefinition) }
     it { expect(subject[0].name_ref).to eq(const_ref(:Foo)) }
-    it { expect(subject[0].superclass_ref).to eq(const_ref(:Bar)) }
+    it { expect(subject[0].superclass_expr.const_reference).to eq(const_ref(:Bar)) }
     it { expect(subject[0].definition_path).to eq(const_ref(nil)) }
     it { expect(subject[0].definition_name).to eq(const_ref(:Foo)) }
   end
@@ -107,7 +107,7 @@ describe Rbtype::Namespace::Resolver do
     it { expect(subject[0].class).to eq(Rbtype::Namespace::ClassDefinition) }
     it { expect(subject[0].name_ref).to eq(const_ref(:Foo, :Bar)) }
     it { expect(subject[0].nesting).to eq([const_ref(nil, :Foo, :Bar), const_ref(nil)]) }
-    it { expect(subject[0].superclass_ref).to eq(nil) }
+    it { expect(subject[0].superclass_expr).to eq(nil) }
     it { expect(subject[0].definition_path).to eq(const_ref(nil, :Foo)) }
     it { expect(subject[0].definition_name).to eq(const_ref(:Bar)) }
   end
@@ -118,7 +118,7 @@ describe Rbtype::Namespace::Resolver do
     it { expect(subject[0].class).to eq(Rbtype::Namespace::ClassDefinition) }
     it { expect(subject[0].name_ref).to eq(const_ref(nil, :Foo, :Bar)) }
     it { expect(subject[0].nesting).to eq([const_ref(nil, :Foo, :Bar), const_ref(nil)]) }
-    it { expect(subject[0].superclass_ref).to eq(nil) }
+    it { expect(subject[0].superclass_expr).to eq(nil) }
     it { expect(subject[0].definition_path).to eq(const_ref(nil, :Foo)) }
     it { expect(subject[0].definition_name).to eq(const_ref(:Bar)) }
   end
@@ -128,12 +128,12 @@ describe Rbtype::Namespace::Resolver do
     it { expect(subject.size).to eq(2) }
     it { expect(subject[0].class).to eq(Rbtype::Namespace::ModuleDefinition) }
     it { expect(subject[0].name_ref).to eq(const_ref(:Foo)) }
-    it { expect(subject[0].superclass_ref).to eq(nil) }
+    it { expect(subject[0].superclass_expr).to eq(nil) }
     it { expect(subject[0].definition_path).to eq(const_ref(nil)) }
     it { expect(subject[0].definition_name).to eq(const_ref(:Foo)) }
     it { expect(subject[1].class).to eq(Rbtype::Namespace::ModuleDefinition) }
     it { expect(subject[1].name_ref).to eq(const_ref(:Bar)) }
-    it { expect(subject[1].superclass_ref).to eq(nil) }
+    it { expect(subject[1].superclass_expr).to eq(nil) }
   end
 
   context 'namespaced module' do
@@ -142,7 +142,7 @@ describe Rbtype::Namespace::Resolver do
     it { expect(subject[0].class).to eq(Rbtype::Namespace::ModuleDefinition) }
     it { expect(subject[0].name_ref).to eq(const_ref(:Foo, :Bar)) }
     it { expect(subject[0].nesting).to eq([const_ref(nil, :Foo, :Bar), const_ref(nil)]) }
-    it { expect(subject[0].superclass_ref).to eq(nil) }
+    it { expect(subject[0].superclass_expr).to eq(nil) }
     it { expect(subject[0].definition_path).to eq(const_ref(nil, :Foo)) }
     it { expect(subject[0].definition_name).to eq(const_ref(:Bar)) }
   end
@@ -174,7 +174,7 @@ describe Rbtype::Namespace::Resolver do
     it { expect(subject[0].class).to eq(Rbtype::Namespace::MethodDefinition) }
     it { expect(subject[0].name_ref).to eq(:foo) }
     it { expect(subject[0].receiver_ref).to eq(nil) }
-    it { expect(subject[0].superclass_ref).to eq(nil) }
+    it { expect(subject[0].superclass_expr).to eq(nil) }
     it { expect(subject[0].definition_path).to eq(const_ref(nil)) }
     it { expect(subject[0].definition_name).to eq(const_ref(:foo)) }
   end
@@ -185,7 +185,7 @@ describe Rbtype::Namespace::Resolver do
     it { expect(subject[0].class).to eq(Rbtype::Namespace::MethodDefinition) }
     it { expect(subject[0].name_ref).to eq(:foo) }
     it { expect(subject[0].receiver_ref.class).to eq(Rbtype::Namespace::SelfReference) }
-    it { expect(subject[0].superclass_ref).to eq(nil) }
+    it { expect(subject[0].superclass_expr).to eq(nil) }
   end
 
   context 'finds method definitions on object instances' do
@@ -195,7 +195,7 @@ describe Rbtype::Namespace::Resolver do
     it { expect(subject[0].name_ref).to eq(:foo) }
     it { expect(subject[0].receiver_ref.class).to eq(Rbtype::Namespace::ReceiverReference) }
     it { expect(subject[0].receiver_ref.to_s).to eq('object') }
-    it { expect(subject[0].superclass_ref).to eq(nil) }
+    it { expect(subject[0].superclass_expr).to eq(nil) }
   end
 
   context 'finds method definitions on class' do
@@ -205,7 +205,7 @@ describe Rbtype::Namespace::Resolver do
     it { expect(subject[0].receiver_ref.class).to eq(Rbtype::Namespace::ConstReference) }
     it { expect(subject[0].name_ref).to eq(:bar) }
     it { expect(subject[0].receiver_ref.to_s).to eq('Foo') }
-    it { expect(subject[0].superclass_ref).to eq(nil) }
+    it { expect(subject[0].superclass_expr).to eq(nil) }
     it { expect(subject[0].definition_path).to eq(const_ref(nil, :Foo)) }
     it { expect(subject[0].definition_name).to eq(const_ref(:bar)) }
   end
@@ -215,7 +215,7 @@ describe Rbtype::Namespace::Resolver do
     it { expect(subject.size).to eq(1) }
     it { expect(subject[0].class).to eq(Rbtype::Namespace::ModuleDefinition) }
     it { expect(subject[0].name_ref).to eq(const_ref(:Foo)) }
-    it { expect(subject[0].superclass_ref).to eq(nil) }
+    it { expect(subject[0].superclass_expr).to eq(nil) }
     it { expect(subject[0].definition_path).to eq(const_ref(nil)) }
     it { expect(subject[0].definition_name).to eq(const_ref(:Foo)) }
     it { expect(subject[0].nesting).to eq([const_ref(nil, :Foo), const_ref(nil)]) }

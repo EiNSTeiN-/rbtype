@@ -11,7 +11,9 @@ module Rbtype
       end
 
       def self.from_node(node)
-        if node.type == :send
+        if node.type == :lvar
+          new(nil, node)
+        elsif node.type == :send
           receiver_ref = if (receiver_node = node.children[0])
             if receiver_node.type == :const
               ConstReference.from_node(receiver_node)
@@ -21,7 +23,8 @@ module Rbtype
           end
           new(receiver_ref, node.children[1])
         else
-          raise ArgumentError, "cannot build name for #{node.type} node"
+          loc = node.location.expression
+          raise ArgumentError, "cannot build name for #{node.type} node at #{loc.source_buffer.name}:#{loc.line}"
         end
       end
 

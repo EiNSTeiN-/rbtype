@@ -23,7 +23,7 @@ module Rbtype
 
       def check_class_ancestors(name, definitions)
         ancestors = definitions.map do |definition|
-          if superclass = definition.superclass_ref
+          if superclass = definition.superclass_expr&.const_reference
             found = @resolver.resolve_with_nesting(superclass, definition.nesting)
             [found || "(not resolved #{superclass})", definition]
           else

@@ -24,7 +24,8 @@ module Rbtype
           receiver_ref = receiver_reference(node.children[0])
           method_name = node.children[1]
         else
-          raise ArgumentError, "cannot build method definition for #{node.type} node"
+          loc = node.location.expression
+          raise ArgumentError, "cannot build method definition for #{node.type} node at #{loc.source_buffer.name}:#{loc.line}"
         end
 
         context = Context.new
@@ -37,12 +38,13 @@ module Rbtype
         return unless node
         if node.type == :const
           ConstReference.from_node(node)
-        elsif node.type == :send
+        elsif [:send, :lvar].include?(node.type)
           ReceiverReference.from_node(node)
         elsif node.type == :self
           SelfReference.from_node(node)
         else
-          raise ArgumentError, "cannot build receiver name for #{node.type} node"
+          loc = node.location.expression
+          raise ArgumentError, "cannot build receiver name for #{node.type} node at #{loc.source_buffer.name}:#{loc.line}"
         end
       end
     end

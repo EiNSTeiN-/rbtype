@@ -20,7 +20,8 @@ module Rbtype
           full_name_ref = nesting.first.join(name_ref)
           new(node, name_ref, full_name_ref, nesting)
         else
-          raise ArgumentError, "cannot build const definition for #{node.type} node"
+          loc = node.location.expression
+          raise ArgumentError, "cannot build const definition for #{node.type} node at #{loc.source_buffer.name}:#{loc.line}"
         end
       end
     end

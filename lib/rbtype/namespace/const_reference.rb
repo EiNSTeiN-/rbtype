@@ -1,3 +1,5 @@
+require_relative 'expression'
+
 module Rbtype
   module Namespace
     class ConstReference
@@ -18,7 +20,8 @@ module Rbtype
         elsif node.type == :cbase
           new([nil])
         else
-          raise ArgumentError, "cannot build name for #{node.type} node"
+          loc = node.location.expression
+          raise ArgumentError, "cannot build name for #{node.type} node at #{loc.source_buffer.name}:#{loc.line}"
         end
       end
 
@@ -60,7 +63,7 @@ module Rbtype
       def join(other)
         other_const = wrap_array(other)
 
-        if other_const.explicit_base?
+        if !other_const.is_a?(ConstReference) || other_const.explicit_base?
           other_const
         else
           self.class.new([*parts, *other_const.parts])
