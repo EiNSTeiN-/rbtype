@@ -16,9 +16,9 @@ module Rbtype
       def check_definition_type(name, definitions)
         defs = definitions.uniq(&:class)
         return if defs.size <= 1
-        locs = defs.map { |defn| format_location(defn) }.join(', ')
-        add_error(name,
-          message: format('Conflicting definitions for %s (see %s)', name, locs))
+        add_error(name, message: format(
+          "Conflicting definitions for %s were resolved to:\n%s", name,
+          format_definition_list(defs)))
       end
 
       def check_class_ancestors(name, definitions)
@@ -39,6 +39,11 @@ module Rbtype
 
       def format_ancestors_list(ancestors)
         list = ancestors.map { |path, defn| "#{path.to_s} at #{format_location(defn)}" }
+        format_list(list)
+      end
+
+      def format_definition_list(defs)
+        list = defs.map { |defn| "#{defn.class} at #{format_location(defn)}" }
         format_list(list)
       end
     end

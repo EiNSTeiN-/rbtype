@@ -36,6 +36,7 @@ module Rbtype
       end
 
       resolve_world(files)
+      resolve_dependencies
 
       @actions.each do |action|
         send("run_action_#{action}", @target)
@@ -61,32 +62,29 @@ module Rbtype
 
     def resolve_world(files)
       @resolver = Rbtype::Namespace::Resolver.new
-      nesting_root = Rbtype::Namespace::ConstReference.new([nil])
-      files.each do |filename|
-        begin
-          ast = parse_file(filename)
-          if ast
-            file_context = Rbtype::Namespace::Context.new
-            @resolver.process(ast, file_context, [nesting_root])
-          else
-            warn "Could not parse into AST: #{relative_filename(filename)}".red
-          end
-        rescue => e
-          warn "Error while parsing parsing: #{relative_filename(filename)}".red
-          raise
-        end
+      loader = Deps::FileLoader.new(@resolver, files, relative_path: Dir.pwd, relative_name: '(pwd)')
+      begin
+        loader.load_all
+      rescue => e
+        warn "Error while loading app: #{e}".red
+        raise
       end
     end
 
-    def parse_file(filename)
-      raw_content = File.read(filename)
-      unless raw_content.encoding == Encoding::UTF_8
-        raw_content.force_encoding(Encoding::UTF_8)
+    def resolve_dependencies
+      gems = Deps::Gems.new(gemfile, lockfile)
+      gems.specs.each do |spec|
+        spec_loader = Deps::SpecLoader.new(@resolver, spec)
+        spec_loader.load_all
       end
-      buffer = ::Parser::Source::Buffer.new(relative_filename(filename))
-      buffer.source = raw_content
-      buffer
-      Rbtype::ProcessedSource.new(buffer, ::Parser::Ruby24).ast
+    end
+
+    def gemfile
+      Bundler::SharedHelpers.default_gemfile
+    end
+
+    def lockfile
+      Bundler::SharedHelpers.default_lockfile
     end
 
     def run_action_describe(targets)

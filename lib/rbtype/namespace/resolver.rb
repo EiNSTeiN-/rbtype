@@ -23,6 +23,12 @@ module Rbtype
         resolver
       end
 
+      def process_from_root(node)
+        nesting = Rbtype::Namespace::ConstReference.new([nil])
+        context = Rbtype::Namespace::Context.new
+        process(node, context, [nesting])
+      end
+
       def process(node, context, nesting)
         if node.is_a?(Array) || node.type == :begin
           node.to_a.each do |child|

@@ -3,6 +3,7 @@ PATH
   specs:
     rbtype (0.1.0)
       activesupport
+      bundler
       colorize
       parser
 
