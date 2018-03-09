@@ -2,7 +2,7 @@ require_relative 'const_reference'
 
 module Rbtype
   module Namespace
-    class ConstDefinition < NamedContext
+    class ConstAssignment < NamedContext
       attr_reader :name_ref
 
       def initialize(ast, name_ref, full_name_ref, nesting)

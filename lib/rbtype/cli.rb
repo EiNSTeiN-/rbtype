@@ -39,7 +39,7 @@ module Rbtype
       resolve_dependencies
 
       @actions.each do |action|
-        send("run_action_#{action}", @target)
+        send("run_action_#{action}", @targets)
       end
 
       true
@@ -90,7 +90,7 @@ module Rbtype
     def run_action_describe(targets)
       targets.each do |target|
         puts
-        puts "---- #{action} @ #{target} ----"
+        puts "---- describe @ #{target} ----"
         ref = build_const_name(target)
         puts Describe.new(@resolver, ref)
       end
@@ -99,7 +99,7 @@ module Rbtype
     def run_action_nesting(targets)
       targets.each do |target|
         puts
-        puts "---- #{action} @ #{target} ----"
+        puts "---- nesting @ #{target} ----"
         ref = build_const_name(target)
         puts Nesting.new(@resolver, ref)
       end

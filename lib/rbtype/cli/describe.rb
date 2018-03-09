@@ -71,7 +71,7 @@ module Rbtype
           'module'
         when Namespace::ClassDefinition
           'class'
-        when Namespace::ConstDefinition
+        when Namespace::ConstAssignment
           'constant'
         when Namespace::MethodDefinition
           'method'

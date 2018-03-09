@@ -14,7 +14,9 @@ module Rbtype
       private
 
       def check_definition_type(name, definitions)
-        defs = definitions.uniq(&:class)
+        defs = definitions
+          .reject { |defn| defn.is_a?(Rbtype::Namespace::ConstAssignment) }
+          .uniq(&:class)
         return if defs.size <= 1
         add_error(name, message: format(
           "Conflicting definitions for %s were resolved to:\n%s", name,
@@ -27,10 +29,10 @@ module Rbtype
             found = @resolver.resolve_with_nesting(superclass, definition.nesting)
             [found || "(not resolved #{superclass})", definition]
           else
-            ['(no parent)', definition]
+            next #['(no parent)', definition]
           end
         end
-        ancestors.uniq!(&:first)
+        ancestors = ancestors.compact.uniq(&:first)
         return if ancestors.size <= 1
         add_error(name, message: format(
           "Conflicting ancestors for `%s` were resolved to:\n%s", name,

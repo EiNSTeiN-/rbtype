@@ -2,7 +2,7 @@ require_relative 'named_context'
 require_relative 'class_definition'
 require_relative 'module_definition'
 require_relative 'method_definition'
-require_relative 'const_definition'
+require_relative 'const_assignment'
 require_relative 'include_reference'
 require_relative 'name_hierarchy'
 require_relative 'name_definitions'
@@ -42,7 +42,7 @@ module Rbtype
           elsif node.type == :module
             ModuleDefinition.from_node(node, resolver: self, nesting: nesting)
           elsif node.type == :casgn
-            ConstDefinition.from_node(node, nesting: nesting)
+            ConstAssignment.from_node(node, nesting: nesting)
           elsif [:def, :defs].include?(node.type)
             MethodDefinition.from_node(node, resolver: self, nesting: nesting)
           end

@@ -15,12 +15,16 @@ describe Rbtype::Namespace::Resolver do
   before { resolver }
   subject { context }
 
+  context 'conditional declaration' do
+    let(:source) { 'module Diff; end unless defined? Diff' }
+  end
+
   context 'const assignment' do
     let(:source) { 'FOO = 1' }
     it { expect(subject.size).to eq(1) }
     it { expect(subject[0].name_ref).to eq(const_ref(:FOO)) }
     it { expect(resolver.resolve_definitions(const_ref(:FOO)).size).to eq(1) }
-    it { expect(resolver.resolve_definitions(const_ref(:FOO))[0].class).to eq(Rbtype::Namespace::ConstDefinition) }
+    it { expect(resolver.resolve_definitions(const_ref(:FOO))[0].class).to eq(Rbtype::Namespace::ConstAssignment) }
   end
 
   context 'top level const assignment' do
@@ -28,7 +32,7 @@ describe Rbtype::Namespace::Resolver do
     it { expect(subject.size).to eq(1) }
     it { expect(subject[0].name_ref).to eq(const_ref(nil, :FOO)) }
     it { expect(resolver.resolve_definitions(const_ref(:FOO)).size).to eq(1) }
-    it { expect(resolver.resolve_definitions(const_ref(:FOO))[0].class).to eq(Rbtype::Namespace::ConstDefinition) }
+    it { expect(resolver.resolve_definitions(const_ref(:FOO))[0].class).to eq(Rbtype::Namespace::ConstAssignment) }
   end
 
   context 'const assignment with path' do

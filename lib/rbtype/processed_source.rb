@@ -12,7 +12,7 @@ module Rbtype
       @buffer = buffer
       @parser = parser_klass.new(Builder.new)
       @parser.diagnostics.consumer = lambda do |diag|
-        puts diag.render
+        #puts diag.render
       end
       @ast = parse
     end
