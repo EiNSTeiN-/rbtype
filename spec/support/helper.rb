@@ -24,8 +24,16 @@ module Support
       const_ref(nil, :String)
     end
 
+    def integer_class_ref
+      const_ref(nil, :Integer)
+    end
+
     def string_instance_ref
       instance_of(string_class_ref)
+    end
+
+    def integer_instance_ref
+      instance_of(integer_class_ref)
     end
 
     def boolean_instance_ref

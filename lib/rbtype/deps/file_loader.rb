@@ -1,6 +1,7 @@
 require 'bundler'
 require 'bundler/dsl'
 require 'rubygems'
+require 'parser/ruby24'
 
 module Rbtype
   module Deps

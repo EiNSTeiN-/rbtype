@@ -7,6 +7,7 @@ require 'colorize'
 require_relative 'cli/describe'
 require_relative 'cli/nesting'
 require_relative 'cli/lint'
+require_relative 'cli/ancestors'
 
 module Rbtype
   class CLI
@@ -18,6 +19,7 @@ module Rbtype
       @actions = []
       @targets = []
       @files = []
+      @load_gems = false
     end
 
     def run(args = ARGV)
@@ -36,7 +38,7 @@ module Rbtype
       end
 
       resolve_world(files)
-      resolve_dependencies
+      resolve_dependencies if @load_gems
 
       @actions.each do |action|
         send("run_action_#{action}", @targets)
@@ -105,6 +107,15 @@ module Rbtype
       end
     end
 
+    def run_action_ancestors(targets)
+      targets.each do |target|
+        puts
+        puts "---- ancestors @ #{target} ----"
+        ref = build_const_name(target)
+        puts Ancestors.new(@resolver, ref)
+      end
+    end
+
     def run_action_lint(_)
       puts Lint.new(@resolver)
     end
@@ -163,6 +174,14 @@ module Rbtype
 
         opts.on("--nesting", "Describe the target") do |config|
           @actions << :nesting
+        end
+
+        opts.on("--ancestors", "Display the target's ancestors tree") do |config|
+          @actions << :ancestors
+        end
+
+        opts.on("--load-gems", "Load gems before analysis") do |config|
+          @load_gems = true
         end
 
         opts.on_tail("-h", "--help", "Show this message") do

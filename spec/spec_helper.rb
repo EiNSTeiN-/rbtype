@@ -1,5 +1,5 @@
 require_relative 'support/helper'
-require 'ast'
+require 'rbtype/ast/sexp'
 
 # See http://rubydoc.info/gems/rspec-core/RSpec/Core/Configuration
 RSpec.configure do |config|
@@ -34,5 +34,5 @@ RSpec.configure do |config|
   config.shared_context_metadata_behavior = :apply_to_host_groups
 
   config.include Support::Helper
-  config.include AST::Sexp
+  config.include Rbtype::AST::Sexp
 end

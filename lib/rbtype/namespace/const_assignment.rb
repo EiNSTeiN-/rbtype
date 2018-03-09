@@ -3,9 +3,10 @@ require_relative 'const_reference'
 module Rbtype
   module Namespace
     class ConstAssignment < NamedContext
-      attr_reader :name_ref
+      attr_reader :value_node
 
       def initialize(ast, name_ref, full_name_ref, nesting)
+        @value_node = ast.children[2]
         super(ast, name_ref, full_name_ref, nil, nil, nesting)
       end
 
@@ -23,6 +24,10 @@ module Rbtype
           loc = node.location.expression
           raise ArgumentError, "cannot build const definition for #{node.type} node at #{loc.source_buffer.name}:#{loc.line}"
         end
+      end
+
+      def value_type
+        TypeEngine.run(value_node).type_identity
       end
     end
   end

@@ -1,6 +1,8 @@
 module Rbtype
   module Namespace
     class Expression
+      attr_reader :node
+
       def initialize(node)
         raise ArgumentError, "node is nil" unless node
         @node = node
