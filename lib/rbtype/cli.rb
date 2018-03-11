@@ -37,8 +37,10 @@ module Rbtype
         success!("no actions to perform...\n#{option_parser}")
       end
 
-      resolve_world(files)
-      resolve_dependencies if @load_gems
+      sources = [
+        *app_sources(files),
+        *(dependencies_sources if @load_gems),
+      ]
 
       @actions.each do |action|
         send("run_action_#{action}", @targets)
@@ -58,26 +60,26 @@ module Rbtype
 
     private
 
-    def relative_filename(filename)
-      filename.sub("#{File.expand_path('.', Dir.pwd)}/", '')
-    end
-
-    def resolve_world(files)
-      @resolver = Rbtype::Lexical::Resolver.new
-      loader = Deps::FileLoader.new(@resolver, files, relative_path: Dir.pwd, relative_name: '(pwd)')
+    def app_sources(files)
+      loader = Deps::FileLoader.new(files, relative_path: Dir.pwd, relative_name: '(pwd)')
       begin
-        loader.load_all
+        loader.sources
       rescue => e
         warn "Error while loading app: #{e}".red
         raise
       end
     end
 
-    def resolve_dependencies
+    def dependencies_sources
       gems = Deps::Gems.new(gemfile, lockfile)
-      gems.specs.each do |spec|
-        spec_loader = Deps::SpecLoader.new(@resolver, spec)
-        spec_loader.load_all
+      gems.specs.map do |spec|
+        spec_loader = Deps::SpecLoader.new(spec)
+        begin
+          spec_loader.sources
+        rescue => e
+          warn "Error while dependency #{spec_loader.short_name}: #{e}".red
+          raise
+        end
       end
     end
 
