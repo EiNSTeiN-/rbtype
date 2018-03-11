@@ -5,7 +5,7 @@ module Rbtype
     class MissingDefinition < Base
       def run
         traverse do |name, definitions, references|
-          next if name == Namespace::ConstReference.new([nil])
+          next if name == Lexical::ConstReference.new([nil])
           next unless definitions.size == 0
           add_error(name, message: format("Missing definition for %s\n%s\n",
             name, format_references_list(references)))

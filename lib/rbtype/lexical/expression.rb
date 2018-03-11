@@ -1,5 +1,5 @@
 module Rbtype
-  module Namespace
+  module Lexical
     class Expression
       attr_reader :node
 

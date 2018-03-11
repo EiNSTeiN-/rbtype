@@ -1,10 +1,10 @@
 require_relative 'named_context'
 
 module Rbtype
-  module Namespace
+  module Lexical
     class ClassDefinition < NamedContext
       def inspect
-        "#<#{self.class.name} name=#{full_name_ref}>"
+        "#<#{self.class.name} name=#{name_ref}>"
       end
     end
   end

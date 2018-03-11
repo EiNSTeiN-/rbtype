@@ -1,16 +1,18 @@
 require_relative 'const_reference'
 
 module Rbtype
-  module Namespace
-    class ConstAssignment < NamedContext
-      attr_reader :value_node
+  module Lexical
+    class ConstAssignment
+      attr_reader :ast, :name_ref, :lexical_parent, :value_node
 
-      def initialize(ast, name_ref, full_name_ref, nesting)
+      def initialize(ast, name_ref, lexical_parent)
+        @ast = ast
+        @name_ref = name_ref
+        @lexical_parent = lexical_parent
         @value_node = ast.children[2]
-        super(ast, name_ref, full_name_ref, nil, nil, nesting)
       end
 
-      def self.from_node(node, nesting:)
+      def self.from_node(node, lexical_parent:)
         if node.type == :casgn
           namespace_ref = if node.children[0]
             ConstReference.from_node(node.children[0])
@@ -18,8 +20,7 @@ module Rbtype
             ConstReference.new
           end
           name_ref = namespace_ref.join(node.children[1])
-          full_name_ref = nesting.first.join(name_ref)
-          new(node, name_ref, full_name_ref, nesting)
+          new(node, name_ref, lexical_parent)
         else
           loc = node.location.expression
           raise ArgumentError, "cannot build const definition for #{node.type} node at #{loc.source_buffer.name}:#{loc.line}"
@@ -27,7 +28,7 @@ module Rbtype
       end
 
       def value_type
-        TypeEngine.run(value_node).type_identity
+        Type::Engine.run(value_node).type_identity
       end
     end
   end

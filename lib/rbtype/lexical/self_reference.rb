@@ -1,5 +1,5 @@
 module Rbtype
-  module Namespace
+  module Lexical
     class SelfReference
       def initialize(node)
         @node = node

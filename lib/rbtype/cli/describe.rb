@@ -36,7 +36,7 @@ module Rbtype
       end
 
       def class_definition?
-        definitions_agree? && definitions.first.is_a?(Namespace::ClassDefinition)
+        definitions_agree? && definitions.first.is_a?(Lexical::ClassDefinition)
       end
 
       def definitions_agreement
@@ -67,13 +67,13 @@ module Rbtype
 
       def friendly_name(definition)
         case definition
-        when Namespace::ModuleDefinition
+        when Lexical::ModuleDefinition
           'module'
-        when Namespace::ClassDefinition
+        when Lexical::ClassDefinition
           'class'
-        when Namespace::ConstAssignment
+        when Lexical::ConstAssignment
           'constant'
-        when Namespace::MethodDefinition
+        when Lexical::MethodDefinition
           'method'
         when nil
           'nil'

@@ -10,15 +10,15 @@ module Rbtype
       end
 
       def instance_of(what)
-        Rbtype::Namespace::InstanceReference.new(what)
+        Rbtype::Lexical::InstanceReference.new(what)
       end
 
       def const_ref(*const)
-        Rbtype::Namespace::ConstReference.new(const)
+        Rbtype::Lexical::ConstReference.new(const)
       end
 
       def union_ref(*members)
-        Rbtype::Namespace::UnionReference.new(members)
+        Rbtype::Type::UnionReference.new(members)
       end
     end
   end

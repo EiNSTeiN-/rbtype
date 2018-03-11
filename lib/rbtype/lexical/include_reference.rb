@@ -1,7 +1,7 @@
 require_relative 'const_reference'
 
 module Rbtype
-  module Namespace
+  module Lexical
     class IncludeReference
       attr_reader :target_ref
 

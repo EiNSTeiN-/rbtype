@@ -2,9 +2,10 @@ require 'spec_helper'
 require 'rbtype'
 require 'parser/ruby24'
 
-describe Rbtype::Namespace::ConstAssignment do
+describe Rbtype::Lexical::ConstAssignment do
   let(:nesting) { [const_ref(nil)] }
-  let(:const_assignment) { described_class.from_node(ast, nesting: nesting) }
+  let(:context) { Rbtype::Lexical::UnnamedContext.new(nil) }
+  let(:const_assignment) { described_class.from_node(ast, lexical_parent: context) }
   subject { const_assignment }
 
   describe 'from_node' do

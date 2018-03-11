@@ -8,7 +8,7 @@ module Rbtype
         method_name = node.children[1]
 
         return unless method_name == :new
-        return unless receiver.type_identity&.is_a?(Namespace::ConstReference)
+        return unless receiver.type_identity&.is_a?(Lexical::ConstReference)
 
         updated(node, type_identity: instance_of(receiver.type_identity))
       end

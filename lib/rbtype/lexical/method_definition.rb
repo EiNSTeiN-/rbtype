@@ -3,20 +3,16 @@ require_relative 'receiver_reference'
 require_relative 'self_reference'
 
 module Rbtype
-  module Namespace
+  module Lexical
     class MethodDefinition < NamedContext
       attr_reader :receiver_ref
 
-      def initialize(node, receiver_ref, method_name, context, nested_into)
+      def initialize(node, receiver_ref, method_name, lexical_parent)
         @receiver_ref = receiver_ref
-        if receiver_ref&.is_a?(ConstReference)
-          nested_into.first.join!(receiver_ref)
-        end
-        full_name_ref = nested_into.first.join(method_name)
-        super(node, method_name, full_name_ref, nil, context, nested_into)
+        super(node, method_name, nil, lexical_parent)
       end
 
-      def self.from_node(node, resolver:, nesting:)
+      def self.from_node(node, resolver:, lexical_parent:)
         if node.type == :def
           receiver = nil
           method_name = node.children[0]
@@ -28,10 +24,11 @@ module Rbtype
           raise ArgumentError, "cannot build method definition for #{node.type} node at #{loc.source_buffer.name}:#{loc.line}"
         end
 
-        context = Context.new
-        obj = new(node, receiver_ref, method_name, context, nesting)
-        resolver.process(node.children, context, nesting)
-        obj
+        new(node, receiver_ref, method_name, lexical_parent)
+      end
+
+      def nesting
+        lexical_parent.nesting
       end
 
       def self.receiver_reference(node)

@@ -1,7 +1,7 @@
 require 'spec_helper'
 require 'rbtype'
 
-describe Rbtype::Namespace::ConstReference do
+describe Rbtype::Lexical::ConstReference do
   describe 'from_node' do
     let(:filename) { 'test.rb' }
     let(:buffer) do

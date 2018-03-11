@@ -10,8 +10,8 @@ describe Rbtype::Lint::MissingDefinition do
   end
   let(:processed_source) { Rbtype::ProcessedSource.new(buffer, ::Parser::Ruby24) }
   let(:ast) { processed_source.ast }
-  let(:context) { Rbtype::Namespace::Context.new }
-  let(:resolver) { Rbtype::Namespace::Resolver.from_node(ast, context: context) }
+  let(:context) { Rbtype::Lexical::UnnamedContext.new }
+  let(:resolver) { Rbtype::Lexical::Resolver.from_node(ast, context: context) }
   let(:linter) { described_class.new(resolver) }
   before { linter.run }
 

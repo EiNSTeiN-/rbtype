@@ -1,23 +1,23 @@
 # frozen_string_literal: true
 
-require 'rbtype/namespace/const_reference'
-require 'rbtype/namespace/union_reference'
-require 'rbtype/namespace/instance_reference'
+require 'rbtype/lexical/const_reference'
+require 'rbtype/lexical/instance_reference'
+require 'rbtype/type/union_reference'
 
 module Support
   module Helper
     extend RSpec::SharedContext
 
     def const_ref(*parts)
-      Rbtype::Namespace::ConstReference.new(parts)
+      Rbtype::Lexical::ConstReference.new(parts)
     end
 
     def union_ref(*members)
-      Rbtype::Namespace::UnionReference.new(members)
+      Rbtype::Type::UnionReference.new(members)
     end
 
     def instance_of(what)
-      Rbtype::Namespace::InstanceReference.new(what)
+      Rbtype::Lexical::InstanceReference.new(what)
     end
 
     def string_class_ref

@@ -1,5 +1,5 @@
 module Rbtype
-  module Namespace
+  module Lexical
     class InstanceReference
       attr_reader :type_const
 

@@ -1,7 +1,7 @@
 require_relative 'named_context'
 
 module Rbtype
-  module Namespace
+  module Lexical
     class ModuleDefinition < NamedContext
     end
   end

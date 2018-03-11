@@ -1,5 +1,5 @@
 module Rbtype
-  module Namespace
+  module Type
     class UnionReference
       attr_reader :members
 

@@ -1,7 +1,7 @@
 require_relative 'expression'
 
 module Rbtype
-  module Namespace
+  module Lexical
     class ConstReference
       attr_reader :parts
 
@@ -12,6 +12,10 @@ module Rbtype
 
       def explicit_base?
         @explicit_base
+      end
+
+      def self.base
+        new([nil])
       end
 
       def self.from_node(node)

@@ -63,7 +63,7 @@ module Rbtype
     end
 
     def resolve_world(files)
-      @resolver = Rbtype::Namespace::Resolver.new
+      @resolver = Rbtype::Lexical::Resolver.new
       loader = Deps::FileLoader.new(@resolver, files, relative_path: Dir.pwd, relative_name: '(pwd)')
       begin
         loader.load_all
@@ -122,7 +122,7 @@ module Rbtype
 
     def build_const_name(target)
       parts = target.split('::', -1).map { |part| part&.to_sym }
-      Namespace::ConstReference.new(parts)
+      Lexical::ConstReference.new(parts)
     end
 
     def load_options(args)

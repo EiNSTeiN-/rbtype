@@ -7,7 +7,7 @@ module Rbtype
       def run
         traverse do |name, definitions, references|
           definitions.each do |definition|
-            check_superclass(name, definition) if definition.is_a?(Namespace::ClassDefinition)
+            check_superclass(name, definition) if definition.is_a?(Lexical::ClassDefinition)
           end
         end
       end

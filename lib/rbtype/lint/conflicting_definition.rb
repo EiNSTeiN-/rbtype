@@ -15,7 +15,7 @@ module Rbtype
 
       def check_definition_type(name, definitions)
         defs = definitions
-          .reject { |defn| defn.is_a?(Rbtype::Namespace::ConstAssignment) }
+          .reject { |defn| defn.is_a?(Rbtype::Lexical::ConstAssignment) }
           .uniq(&:class)
         return if defs.size <= 1
         add_error(name, message: format(

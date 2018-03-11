@@ -1,7 +1,7 @@
 require_relative 'const_reference'
 
 module Rbtype
-  module Namespace
+  module Lexical
     class ReceiverReference
       attr_reader :receiver_ref, :method_name
 
