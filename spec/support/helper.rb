@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require 'rbtype'
 require 'rbtype/lexical/const_reference'
 require 'rbtype/lexical/instance_reference'
 require 'rbtype/type/union_reference'
@@ -7,6 +8,13 @@ require 'rbtype/type/union_reference'
 module Support
   module Helper
     extend RSpec::SharedContext
+
+    def build_processed_source(source, filename: 'test.rb', buffer: nil, parser: ::Parser::Ruby24)
+      buffer ||= ::Parser::Source::Buffer.new(filename).tap do |buffer|
+        buffer.source = source
+      end
+      Rbtype::ProcessedSource.new(buffer, parser)
+    end
 
     def const_ref(*parts)
       Rbtype::Lexical::ConstReference.new(parts)

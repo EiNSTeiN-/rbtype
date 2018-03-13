@@ -23,5 +23,11 @@ require 'rbtype/processors/type_identity'
 require 'rbtype/processors/instantiation_tagger'
 require 'rbtype/processors/const_reference_tagger'
 
+require 'rbtype/runtime/class'
+require 'rbtype/runtime/module'
+require 'rbtype/runtime/object_space'
+require 'rbtype/runtime/runtime'
+require 'rbtype/runtime/undefined'
+
 require 'rbtype/processed_source'
 require 'rbtype/version'

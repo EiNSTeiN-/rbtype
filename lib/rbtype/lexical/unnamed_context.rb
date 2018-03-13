@@ -1,14 +1,10 @@
 module Rbtype
   module Lexical
     class UnnamedContext
-      attr_reader :includes, :methods, :constants, :classes, :modules
+      attr_reader :definitions
 
       def initialize(lexical_parent)
-        @includes = []
-        @methods = []
-        @constants = []
-        @classes = []
-        @modules = []
+        @definitions = []
         @lexical_parent = lexical_parent
       end
 

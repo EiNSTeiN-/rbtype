@@ -9,35 +9,30 @@ describe Rbtype::Lexical::Resolver do
     buffer
   end
   let(:processed_source) { Rbtype::ProcessedSource.new(buffer, ::Parser::Ruby24) }
-  let(:ast) { processed_source.ast }
-  let(:lexical_scope) { Rbtype::Lexical::UnnamedContext.new(nil) }
-  let(:resolver) { described_class.from_node(ast, lexical_parent: lexical_scope) }
-  let(:includes) { lexical_scope.includes }
-  let(:methods) { lexical_scope.methods }
-  let(:constants) { lexical_scope.constants }
-  before { resolver }
-  subject { lexical_scope }
+  let(:lexical_context) { processed_source.lexical_context }
+  let(:definitions) { lexical_context.definitions }
+  subject { lexical_context }
 
   context 'finds class definitions' do
     let(:source) { 'class Foo; end; class Bar; end' }
-    let(:foo) { lexical_scope.classes[0] }
-    let(:bar) { lexical_scope.classes[1] }
-    it { expect(lexical_scope.classes.size).to eq(2) }
+    let(:foo) { definitions[0] }
+    let(:bar) { definitions[1] }
+    it { expect(definitions.size).to eq(2) }
 
     it { expect(foo.class).to eq(Rbtype::Lexical::ClassDefinition) }
     it { expect(foo.name_ref).to eq(const_ref(:Foo)) }
-    it { expect(foo.nesting).to eq([foo, lexical_scope]) }
+    it { expect(foo.nesting).to eq([foo, lexical_context]) }
     it { expect(foo.superclass_expr).to eq(nil) }
 
     it { expect(bar.class).to eq(Rbtype::Lexical::ClassDefinition) }
     it { expect(bar.name_ref).to eq(const_ref(:Bar)) }
-    it { expect(bar.nesting).to eq([bar, lexical_scope]) }
+    it { expect(bar.nesting).to eq([bar, lexical_context]) }
     it { expect(bar.superclass_expr).to eq(nil) }
   end
 
   context 'class with superclass' do
     let(:source) { 'class Foo < Bar; end' }
-    let(:foo) { lexical_scope.classes[0] }
+    let(:foo) { definitions[0] }
     it { expect(foo.class).to eq(Rbtype::Lexical::ClassDefinition) }
     it { expect(foo.name_ref).to eq(const_ref(:Foo)) }
     it { expect(foo.superclass_expr.const_reference).to eq(const_ref(:Bar)) }
@@ -45,26 +40,26 @@ describe Rbtype::Lexical::Resolver do
 
   context 'namespaced class' do
     let(:source) { 'class Foo::Bar; end' }
-    let(:foo) { lexical_scope.classes[0] }
+    let(:foo) { definitions[0] }
     it { expect(foo.class).to eq(Rbtype::Lexical::ClassDefinition) }
     it { expect(foo.name_ref).to eq(const_ref(:Foo, :Bar)) }
-    it { expect(foo.nesting).to eq([foo, lexical_scope]) }
+    it { expect(foo.nesting).to eq([foo, lexical_context]) }
     it { expect(foo.superclass_expr).to eq(nil) }
   end
 
   context 'root namespaced class' do
     let(:source) { 'class ::Foo::Bar; end' }
-    let(:foo) { lexical_scope.classes[0] }
+    let(:foo) { definitions[0] }
     it { expect(foo.class).to eq(Rbtype::Lexical::ClassDefinition) }
     it { expect(foo.name_ref).to eq(const_ref(nil, :Foo, :Bar)) }
-    it { expect(foo.nesting).to eq([foo, lexical_scope]) }
+    it { expect(foo.nesting).to eq([foo, lexical_context]) }
     it { expect(foo.superclass_expr).to eq(nil) }
   end
 
   context 'finds module definitions' do
     let(:source) { 'module Foo; end; module Bar; end' }
-    let(:foo) { lexical_scope.modules[0] }
-    let(:bar) { lexical_scope.modules[1] }
+    let(:foo) { definitions[0] }
+    let(:bar) { definitions[1] }
     it { expect(foo.class).to eq(Rbtype::Lexical::ModuleDefinition) }
     it { expect(foo.name_ref).to eq(const_ref(:Foo)) }
     it { expect(foo.superclass_expr).to eq(nil) }
@@ -76,34 +71,34 @@ describe Rbtype::Lexical::Resolver do
 
   context 'namespaced module' do
     let(:source) { 'module Foo::Bar; end' }
-    let(:bar) { lexical_scope.modules[0] }
+    let(:bar) { definitions[0] }
     it { expect(bar.class).to eq(Rbtype::Lexical::ModuleDefinition) }
     it { expect(bar.name_ref).to eq(const_ref(:Foo, :Bar)) }
-    it { expect(bar.nesting).to eq([bar, lexical_scope]) }
+    it { expect(bar.nesting).to eq([bar, lexical_context]) }
     it { expect(bar.superclass_expr).to eq(nil) }
   end
 
   context 'namespaced nesting' do
     let(:source) { 'module Foo::Bar; module Baz; end end' }
-    let(:bar) { lexical_scope.modules[0] }
-    let(:baz) { bar.modules[0] }
+    let(:bar) { definitions[0] }
+    let(:baz) { bar.definitions[0] }
     it { expect(bar.class).to eq(Rbtype::Lexical::ModuleDefinition) }
     it { expect(baz.class).to eq(Rbtype::Lexical::ModuleDefinition) }
-    it { expect(baz.nesting).to eq([baz, bar, lexical_scope]) }
+    it { expect(baz.nesting).to eq([baz, bar, lexical_context]) }
   end
 
   context 'root namespaced nesting' do
     let(:source) { 'module Foo::Bar; module ::Baz; end; end' }
-    let(:bar) { lexical_scope.modules[0] }
-    let(:baz) { bar.modules[0] }
+    let(:bar) { definitions[0] }
+    let(:baz) { bar.definitions[0] }
     it { expect(bar.class).to eq(Rbtype::Lexical::ModuleDefinition) }
     it { expect(baz.class).to eq(Rbtype::Lexical::ModuleDefinition) }
-    it { expect(baz.nesting).to eq([baz, bar, lexical_scope]) }
+    it { expect(baz.nesting).to eq([baz, bar, lexical_context]) }
   end
 
   context 'finds method definitions' do
     let(:source) { 'def foo; end' }
-    let(:foo) { lexical_scope.methods[0] }
+    let(:foo) { definitions[0] }
     it { expect(foo.class).to eq(Rbtype::Lexical::MethodDefinition) }
     it { expect(foo.name_ref).to eq(:foo) }
     it { expect(foo.receiver_ref).to eq(nil) }
@@ -112,7 +107,7 @@ describe Rbtype::Lexical::Resolver do
 
   context 'finds singleton method definitions' do
     let(:source) { 'def self.foo; end' }
-    let(:foo) { lexical_scope.methods[0] }
+    let(:foo) { definitions[0] }
     it { expect(foo.class).to eq(Rbtype::Lexical::MethodDefinition) }
     it { expect(foo.name_ref).to eq(:foo) }
     it { expect(foo.receiver_ref.class).to eq(Rbtype::Lexical::SelfReference) }
@@ -121,7 +116,7 @@ describe Rbtype::Lexical::Resolver do
 
   context 'finds method definitions on object instances' do
     let(:source) { 'def object.foo; end' }
-    let(:foo) { lexical_scope.methods[0] }
+    let(:foo) { definitions[0] }
     it { expect(foo.class).to eq(Rbtype::Lexical::MethodDefinition) }
     it { expect(foo.name_ref).to eq(:foo) }
     it { expect(foo.receiver_ref.class).to eq(Rbtype::Lexical::ReceiverReference) }
@@ -131,7 +126,7 @@ describe Rbtype::Lexical::Resolver do
 
   context 'finds method definitions on class' do
     let(:source) { 'def Foo.bar; end' }
-    let(:foo) { lexical_scope.methods[0] }
+    let(:foo) { definitions[0] }
     it { expect(foo.class).to eq(Rbtype::Lexical::MethodDefinition) }
     it { expect(foo.receiver_ref.class).to eq(Rbtype::Lexical::ConstReference) }
     it { expect(foo.name_ref).to eq(:bar) }
@@ -141,41 +136,41 @@ describe Rbtype::Lexical::Resolver do
 
   context 'nested definitions' do
     let(:source) { 'module Foo; class Bar; def bla; end; end; end' }
-    let(:foo) { lexical_scope.modules[0] }
-    let(:bar) { foo.classes[0] }
-    let(:bla) { bar.methods[0] }
+    let(:foo) { definitions[0] }
+    let(:bar) { foo.definitions[0] }
+    let(:bla) { bar.definitions[0] }
 
     it { expect(foo.class).to eq(Rbtype::Lexical::ModuleDefinition) }
     it { expect(foo.name_ref).to eq(const_ref(:Foo)) }
     it { expect(foo.superclass_expr).to eq(nil) }
-    it { expect(foo.nesting).to eq([foo, lexical_scope]) }
+    it { expect(foo.nesting).to eq([foo, lexical_context]) }
 
     it { expect(bar.class).to eq(Rbtype::Lexical::ClassDefinition) }
     it { expect(bar.name_ref).to eq(const_ref(:Bar)) }
     it { expect(bar.nesting).to \
-      eq([bar, foo, lexical_scope]) }
+      eq([bar, foo, lexical_context]) }
 
     it { expect(bla.class).to eq(Rbtype::Lexical::MethodDefinition) }
     it { expect(bla.name_ref).to eq(:bla) }
     it { expect(bla.nesting).to \
-      eq([bar, foo, lexical_scope]) }
+      eq([bar, foo, lexical_context]) }
   end
 
   context 'definitions know their parent' do
     let(:source) { 'module Foo; class Bar; end; end' }
-    let(:foo) { lexical_scope.modules[0] }
-    let(:bar) { foo.classes[0] }
+    let(:foo) { definitions[0] }
+    let(:bar) { foo.definitions[0] }
     it { expect(bar.nesting).to eq([
       bar,
       foo,
-      lexical_scope
+      lexical_context
     ]) }
   end
 
   context 'include into module' do
     let(:source) { 'module Foo; include Bar; end' }
-    let(:foo) { lexical_scope.modules[0] }
-    let(:bar) { foo.includes[0] }
+    let(:foo) { definitions[0] }
+    let(:bar) { foo.definitions[0] }
 
     it { expect(foo.class).to eq(Rbtype::Lexical::ModuleDefinition) }
     it { expect(bar.class).to eq(Rbtype::Lexical::IncludeReference) }

@@ -20,18 +20,18 @@ module Rbtype
             process(child, lexical_parent) if child.is_a?(::AST::Node)
           end
         elsif include_node?(node)
-          lexical_parent.includes << IncludeReference.from_node(node)
+          lexical_parent.definitions << IncludeReference.from_node(node)
         elsif [:def, :defs].include?(node.type)
-          lexical_parent.methods << MethodDefinition.from_node(node, resolver: self, lexical_parent: lexical_parent)
+          lexical_parent.definitions << MethodDefinition.from_node(node, resolver: self, lexical_parent: lexical_parent)
         elsif node.type == :casgn
-          lexical_parent.constants << ConstAssignment.from_node(node, lexical_parent: lexical_parent)
+          lexical_parent.definitions << ConstAssignment.from_node(node, lexical_parent: lexical_parent)
         else
           if node.type == :class
             defn = ClassDefinition.from_node(node, resolver: self, lexical_parent: lexical_parent)
-            lexical_parent.classes << defn
+            lexical_parent.definitions << defn
           elsif node.type == :module
             defn = ModuleDefinition.from_node(node, resolver: self, lexical_parent: lexical_parent)
-            lexical_parent.modules << defn
+            lexical_parent.definitions << defn
           end
         end
       end

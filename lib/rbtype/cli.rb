@@ -41,6 +41,7 @@ module Rbtype
         *app_sources(files),
         *(dependencies_sources if @load_gems),
       ]
+      runtime = Runtime::Runtime.from_sources(sources)
 
       @actions.each do |action|
         send("run_action_#{action}", @targets)
