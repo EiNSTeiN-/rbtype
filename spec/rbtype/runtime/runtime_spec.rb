@@ -16,6 +16,15 @@ describe Rbtype::Runtime::Runtime do
       it { expect(subject.type).to eq :class }
     end
 
+    context 'finds module A when defined' do
+      subject { runtime.find_const(const_ref(:A)) }
+      let(:content) { 'module A; end' }
+
+      it { expect(subject.class).to eq Rbtype::Runtime::Module }
+      it { expect(subject.name).to eq const_ref(:A) }
+      it { expect(subject.type).to eq :module }
+    end
+
     context 'class can be defined multiple times' do
       let(:file1) { 'class A; end' }
       let(:file2) { 'class A; end' }
@@ -86,6 +95,65 @@ describe Rbtype::Runtime::Runtime do
       it { expect(b.class).to eq Rbtype::Runtime::Class }
       it { expect(b.name).to eq const_ref(:B) }
       it { expect(b.type).to eq :class }
+    end
+
+    context 'nested classes defined on parent' do
+      let(:content) { 'class A; class A::B; end end' }
+      subject { runtime }
+      let(:a) { runtime.find_const(const_ref(:A)) }
+      let(:b) { runtime.find_const(const_ref(:A, :B)) }
+
+      it { expect(subject.names).to eq [const_ref(:A)] }
+
+      it { expect(a.class).to eq Rbtype::Runtime::Class }
+      it { expect(a.name).to eq const_ref(:A) }
+      it { expect(a.type).to eq :class }
+
+      it { expect(b.class).to eq Rbtype::Runtime::Class }
+      it { expect(b.name).to eq const_ref(:B) }
+      it { expect(b.type).to eq :class }
+    end
+
+    context 'nested classes defined on neighbour' do
+      let(:content) { <<~EOF }
+        class A
+          class A; end
+          class A::B; end
+        end
+      EOF
+      subject { runtime }
+      let(:a) { runtime.find_const(const_ref(:A)) }
+      let(:aa) { runtime.find_const(const_ref(:A, :A)) }
+      let(:ab) { runtime.find_const(const_ref(:A, :B)) }
+      let(:aab) { runtime.find_const(const_ref(:A, :A, :B)) }
+
+      it { expect(subject.names).to eq [const_ref(:A)] }
+
+      it { expect(a.class).to eq Rbtype::Runtime::Class }
+      it { expect(a.name).to eq const_ref(:A) }
+      it { expect(a.type).to eq :class }
+
+      it { expect(aa.class).to eq Rbtype::Runtime::Class }
+      it { expect(aa.name).to eq const_ref(:A) }
+      it { expect(aa.type).to eq :class }
+
+      it { expect(ab).to eq nil }
+
+      it { expect(aab.class).to eq Rbtype::Runtime::Class }
+      it { expect(aab.name).to eq const_ref(:B) }
+      it { expect(aab.type).to eq :class }
+    end
+
+    context 'conflicting definitions' do
+      let(:file1) { 'class A; end' }
+      let(:file2) { 'module A; end' }
+      let(:source1) { build_processed_source(file1) }
+      let(:source2) { build_processed_source(file2) }
+      let(:sources) { [source1, source2] }
+      subject { runtime }
+
+      it { expect{ subject }.to raise_error(RuntimeError,
+        'conflicting object redefinition: ::A is already defined as class instead of module') }
     end
   end
 end

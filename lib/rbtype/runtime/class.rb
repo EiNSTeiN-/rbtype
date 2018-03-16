@@ -5,14 +5,26 @@ module Rbtype
     class Class < ObjectSpace
       attr_reader :definitions, :name
 
-      def initialize(definition, name)
+      def initialize(definition, name, parent)
         @definitions = [definition]
         @name = name
-        super()
+        super(parent)
+      end
+
+      def path
+        @path ||= parent.path.join(name)
       end
 
       def type
         :class
+      end
+
+      def to_s
+        "class(#{name})"
+      end
+
+      def inspect
+        "#<#{self.class.name} #{path}>"
       end
     end
   end
