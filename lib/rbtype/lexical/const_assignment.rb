@@ -12,6 +12,18 @@ module Rbtype
         @value_node = ast.children[2]
       end
 
+      def type
+        :const_assignment
+      end
+
+      def location
+        @location ||= ast&.location&.expression
+      end
+
+      def namespaced?
+        name_ref.size > 1
+      end
+
       def self.from_node(node, lexical_parent:)
         if node.type == :casgn
           namespace_ref = if node.children[0]
@@ -28,7 +40,7 @@ module Rbtype
       end
 
       def value_type
-        Type::Engine.run(value_node).type_identity
+        @type_identity ||= Type::Engine.run(value_node).type_identity
       end
     end
   end

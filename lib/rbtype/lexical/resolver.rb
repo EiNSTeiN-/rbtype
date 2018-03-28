@@ -40,7 +40,7 @@ module Rbtype
 
       def include_node?(node)
         node.type == :send &&
-          node.children[0] == nil
+          node.children[0] == nil &&
           node.children[1] == :include
       end
     end

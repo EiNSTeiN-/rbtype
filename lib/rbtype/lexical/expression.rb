@@ -21,12 +21,13 @@ module Rbtype
       end
 
       def const_reference
-        ConstReference.from_node(@node) if const?
+        @const_reference ||= ConstReference.from_node(@node) if const?
       end
 
       def to_s
         loc = @node.location.expression
-        "(expression at #{loc.source_buffer.name}:#{loc.line})"
+        source = loc.source
+        "`#{source}` at #{loc.source_buffer.name}:#{loc.line}"
       end
 
       def inspect

@@ -1,30 +1,14 @@
-require_relative 'object_space'
+require_relative 'named_object'
 
 module Rbtype
   module Runtime
-    class Module < ObjectSpace
-      attr_reader :definitions, :name
-
-      def initialize(definition, name, parent)
-        @definitions = [definition]
-        @name = name
-        super(parent)
+    class Module < NamedObject
+      def initialize(name, parent:, definition:)
+        super(:module, name, parent: parent, definition: definition)
       end
 
-      def path
-        @path ||= parent.path.join(name)
-      end
-
-      def type
-        :module
-      end
-
-      def to_s
-        "#{type}(#{name})"
-      end
-
-      def inspect
-        "#<#{self.class} #{path}>"
+      def ancestors
+        [self]
       end
     end
   end

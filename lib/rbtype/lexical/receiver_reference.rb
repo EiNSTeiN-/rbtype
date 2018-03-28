@@ -11,7 +11,7 @@ module Rbtype
       end
 
       def self.from_node(node)
-        if node.type == :lvar
+        if [:lvar, :cvar].include?(node.type)
           new(nil, node)
         elsif node.type == :send
           receiver_ref = if (receiver_node = node.children[0])
@@ -24,7 +24,7 @@ module Rbtype
           new(receiver_ref, node.children[1])
         else
           loc = node.location.expression
-          raise ArgumentError, "cannot build name for #{node.type} node at #{loc.source_buffer.name}:#{loc.line}"
+          raise ArgumentError, "cannot build receiver reference for #{node.type} node at #{loc.source_buffer.name}:#{loc.line}"
         end
       end
 

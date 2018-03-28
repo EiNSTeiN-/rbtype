@@ -3,9 +3,10 @@ require_relative 'const_reference'
 module Rbtype
   module Lexical
     class IncludeReference
-      attr_reader :target_ref
+      attr_reader :ast, :target_ref
 
-      def initialize(target_ref)
+      def initialize(ast, target_ref)
+        @ast = ast
         @target_ref = target_ref
       end
 
@@ -13,16 +14,24 @@ module Rbtype
         if node.type == :send
           if [:const, :cbase].include?(node.children[2].type)
             target_ref = ConstReference.from_node(node.children[2])
-            new(target_ref)
+            new(node, target_ref)
           end
         else
           loc = node.location.expression
-          raise ArgumentError, "cannot build name for #{node.type} node at #{loc.source_buffer.name}:#{loc.line}"
+          raise ArgumentError, "cannot build include reference for #{node.type} node at #{loc.source_buffer.name}:#{loc.line}"
         end
       end
 
+      def type
+        :include_reference
+      end
+
+      def location
+        @location ||= ast&.location&.expression
+      end
+
       def to_s
-        "include(#{target})"
+        "include(#{target_ref})"
       end
     end
   end

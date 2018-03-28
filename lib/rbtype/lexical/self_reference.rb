@@ -10,7 +10,7 @@ module Rbtype
           new(node)
         else
           loc = node.location.expression
-          raise ArgumentError, "cannot build name for #{node.type} node at #{loc.source_buffer.name}:#{loc.line}"
+          raise ArgumentError, "cannot build self reference for #{node.type} node at #{loc.source_buffer.name}:#{loc.line}"
         end
       end
 

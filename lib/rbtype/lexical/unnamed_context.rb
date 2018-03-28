@@ -1,15 +1,16 @@
 module Rbtype
   module Lexical
     class UnnamedContext
-      attr_reader :definitions
+      attr_reader :type, :definitions
 
-      def initialize(lexical_parent)
+      def initialize(type, lexical_parent)
+        @type = type
         @definitions = []
         @lexical_parent = lexical_parent
       end
 
       def nesting
-        [self]
+        @nesting ||= [self]
       end
 
       def inspect

@@ -1,30 +1,24 @@
-require_relative 'object_space'
+require_relative 'named_object'
 
 module Rbtype
   module Runtime
-    class Class < ObjectSpace
-      attr_reader :definitions, :name
-
-      def initialize(definition, name, parent)
-        @definitions = [definition]
-        @name = name
-        super(parent)
+    class Class < NamedObject
+      def initialize(name, parent:, definition:, superclass:)
+        @superclass = superclass
+        super(:class, name, parent: parent, definition: definition)
       end
 
-      def path
-        @path ||= parent.path.join(name)
+      def superclass
+        return unless @superclass
+        if @superclass.type == :unresolved
+          resolved = @superclass.resolved
+          @superclass = resolved if resolved
+        end
+        @superclass
       end
 
-      def type
-        :class
-      end
-
-      def to_s
-        "class(#{name})"
-      end
-
-      def inspect
-        "#<#{self.class.name} #{path}>"
+      def ancestors
+        [self, *superclass&.ancestors]
       end
     end
   end

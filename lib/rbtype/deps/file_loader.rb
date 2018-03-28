@@ -6,22 +6,39 @@ require 'parser/ruby24'
 module Rbtype
   module Deps
     class FileLoader
-      def initialize(files, relative_path:, relative_name:, ignore_errors: false)
+      def initialize(files, relative_path:, relative_name:, ignore_errors: false, cache: nil)
         @files = files
         @relative_path = relative_path
         @relative_name = relative_name
         @ignore_errors = ignore_errors
+        @cache = cache
       end
 
       def sources
-        @sources ||= @files.map { |filename| build_source(filename) }
+        @sources ||= relevant_files.map { |filename| build_source(filename) }
       end
 
       private
 
+      def relevant_files
+        @files.select { |filename| filename.end_with?('.rb') }
+      end
+
+      def with_cache(key, modified, &block)
+        return yield unless @cache
+        @cache.with_cache(key, modified, &block)
+      end
+
       def build_source(filename)
-        buffer = build_buffer(read_file(filename), filename)
-        Rbtype::ProcessedSource.new(buffer, ::Parser::Ruby24)
+        raw_content = read_file(filename)
+        modified = File.mtime(filename)
+        source = with_cache("processed-source:#{filename}", modified) do
+          buffer = build_buffer(raw_content, filename)
+          Rbtype::ProcessedSource.new(buffer, ::Parser::Ruby24)
+        end
+      rescue Parser::SyntaxError
+        puts "Parser error while loading #{filename}"
+        raise unless @ignore_errors
       end
 
       def read_file(filename)

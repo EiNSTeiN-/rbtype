@@ -6,9 +6,8 @@ require 'rbtype/deps/file_loader'
 require 'rbtype/deps/gems'
 require 'rbtype/deps/spec_loader'
 
-require 'rbtype/lint/conflicting_definition'
-require 'rbtype/lint/missing_definition'
-require 'rbtype/lint/unresolved_reference'
+linters = Dir[File.join(File.dirname(__FILE__), 'rbtype/lint/*.rb')]
+linters.each { |filename| require(filename) }
 
 require 'rbtype/lexical/resolver'
 require 'rbtype/lexical/const_reference'
@@ -28,6 +27,12 @@ require 'rbtype/runtime/module'
 require 'rbtype/runtime/object_space'
 require 'rbtype/runtime/runtime'
 require 'rbtype/runtime/undefined'
+require 'rbtype/runtime/top_level'
+require 'rbtype/runtime/named_object'
+require 'rbtype/runtime/opaque_expression'
+require 'rbtype/runtime/unresolved_constant'
+require 'rbtype/runtime/constant_resolution_context'
 
 require 'rbtype/processed_source'
+require 'rbtype/cache'
 require 'rbtype/version'

@@ -4,7 +4,7 @@ require 'parser/ruby24'
 
 describe Rbtype::Lexical::ConstAssignment do
   let(:nesting) { [const_ref(nil)] }
-  let(:context) { Rbtype::Lexical::UnnamedContext.new(nil) }
+  let(:context) { Rbtype::Lexical::UnnamedContext.new(:top_level, nil) }
   let(:const_assignment) { described_class.from_node(ast, lexical_parent: context) }
   subject { const_assignment }
 

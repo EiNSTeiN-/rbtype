@@ -5,19 +5,44 @@ module Rbtype
     class Base
       attr_reader :errors
 
-      def initialize(resolver)
-        @resolver = resolver
+      def initialize(runtime)
+        @runtime = runtime
         @errors = []
+      end
+
+      private
+
+      def sources
+        @runtime.sources
+      end
+
+      def runtime
+        @runtime
       end
 
       def add_error(subject, message: MSG)
         @errors << Error.new(self, subject, message)
       end
 
-      def traverse(hierarchy = @resolver.hierarchy, &block)
-        block.call(hierarchy.full_name, hierarchy.definitions, hierarchy.references)
-        hierarchy.children.each do |child|
+      def traverse(object = @runtime.top_level, &block)
+        block.call(object)
+        object.each do |_, child|
           traverse(child, &block)
+        end
+      end
+
+      def traverse_definitions(&block)
+        sources.each do |source|
+          traverse_lexical_context_definitions(source.lexical_context, &block)
+        end
+      end
+
+      def traverse_lexical_context_definitions(context, &block)
+        block.call(context)
+        if context.respond_to?(:definitions)
+          context.definitions.each do |subcontext|
+            traverse_lexical_context_definitions(subcontext, &block)
+          end
         end
       end
 

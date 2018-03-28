@@ -37,12 +37,20 @@ module Rbtype
         success!("no actions to perform...\n#{option_parser}")
       end
 
+      prepare_cache
+
+      puts "Loading sources..."
       sources = [
+        *typedefs,
         *app_sources(files),
         *(dependencies_sources if @load_gems),
-      ]
-      runtime = Runtime::Runtime.from_sources(sources)
+      ].flatten.compact
 
+      puts "Building runtime..."
+      @runtime = Runtime::Runtime.from_sources(sources)
+      puts "Done!"
+
+      puts "Running linters..."
       @actions.each do |action|
         send("run_action_#{action}", @targets)
       end
@@ -61,8 +69,37 @@ module Rbtype
 
     private
 
+    def prepare_cache
+      path = Pathname.new(Dir.pwd).join('.cache')
+      Dir.mkdir(path) unless File.exist?(path)
+      @cache = Rbtype::Cache.new(path)
+    end
+
+    def typedefs
+      basepath = File.expand_path(File.dirname(__FILE__))
+      loader = Deps::FileLoader.new(
+        [
+          File.join(basepath, 'ruby-typedef')
+        ],
+        relative_path: basepath,
+        relative_name: '(rbtype)',
+        cache: @cache,
+      )
+      begin
+        loader.sources
+      rescue => e
+        warn "Error while loading app: #{e}".red
+        raise
+      end
+    end
+
     def app_sources(files)
-      loader = Deps::FileLoader.new(files, relative_path: Dir.pwd, relative_name: '(pwd)')
+      loader = Deps::FileLoader.new(
+        files,
+        relative_path: Dir.pwd,
+        relative_name: '(pwd)',
+        cache: @cache,
+      )
       begin
         loader.sources
       rescue => e
@@ -74,7 +111,7 @@ module Rbtype
     def dependencies_sources
       gems = Deps::Gems.new(gemfile, lockfile)
       gems.specs.map do |spec|
-        spec_loader = Deps::SpecLoader.new(spec)
+        spec_loader = Deps::SpecLoader.new(spec, ignore_errors: true, cache: @cache)
         begin
           spec_loader.sources
         rescue => e
@@ -97,7 +134,7 @@ module Rbtype
         puts
         puts "---- describe @ #{target} ----"
         ref = build_const_name(target)
-        puts Describe.new(@resolver, ref)
+        puts Describe.new(@runtime, ref)
       end
     end
 
@@ -106,7 +143,7 @@ module Rbtype
         puts
         puts "---- nesting @ #{target} ----"
         ref = build_const_name(target)
-        puts Nesting.new(@resolver, ref)
+        puts Nesting.new(@runtime, ref)
       end
     end
 
@@ -115,12 +152,12 @@ module Rbtype
         puts
         puts "---- ancestors @ #{target} ----"
         ref = build_const_name(target)
-        puts Ancestors.new(@resolver, ref)
+        puts Ancestors.new(@runtime, ref)
       end
     end
 
     def run_action_lint(_)
-      puts Lint.new(@resolver)
+      puts Lint.new(@runtime)
     end
 
     def build_const_name(target)

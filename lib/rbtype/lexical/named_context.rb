@@ -7,12 +7,12 @@ module Rbtype
     class NamedContext < UnnamedContext
       attr_reader :ast, :name_ref, :superclass_expr, :lexical_parent
 
-      def initialize(ast, name_ref, superclass_expr, lexical_parent)
-        raise 'lexical_parent must be defined' if lexical_parent.nil?
+      def initialize(type, ast, name_ref, superclass_expr, lexical_parent)
+        raise 'lexical_parent must be defined' unless lexical_parent
         @ast = ast
         @name_ref = name_ref
         @superclass_expr = superclass_expr
-        super(lexical_parent)
+        super(type, lexical_parent)
       end
 
       def to_s
@@ -24,11 +24,15 @@ module Rbtype
       end
 
       def location
-        ast&.location&.expression
+        @location ||= ast&.location&.expression
+      end
+
+      def namespaced?
+        name_ref.size > 1
       end
 
       def nesting
-        [self, *lexical_parent.nesting]
+        @nesting ||= [self, *lexical_parent.nesting]
       end
 
       def self.from_node(node, resolver:, lexical_parent:)

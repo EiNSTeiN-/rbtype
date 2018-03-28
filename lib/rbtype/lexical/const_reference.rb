@@ -10,6 +10,10 @@ module Rbtype
         @explicit_base = @parts.size > 0 && @parts[0] == nil
       end
 
+      def type
+        :const_reference
+      end
+
       def explicit_base?
         @explicit_base
       end
@@ -25,7 +29,7 @@ module Rbtype
           new([nil])
         else
           loc = node.location.expression
-          raise ArgumentError, "cannot build name for #{node.type} node at #{loc.source_buffer.name}:#{loc.line}"
+          raise ArgumentError, "cannot build const reference for #{node.type} node at #{loc.source_buffer.name}:#{loc.line}"
         end
       end
 
@@ -61,7 +65,7 @@ module Rbtype
       alias_method :eql?, :==
 
       def hash
-        parts.hash
+        @hash ||= parts.hash
       end
 
       def join(other)

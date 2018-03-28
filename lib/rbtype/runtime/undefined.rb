@@ -1,18 +1,10 @@
-require_relative 'object_space'
+require_relative 'named_object'
 
 module Rbtype
   module Runtime
-    class Undefined < ObjectSpace
-      attr_reader :definitions, :name
-
-      def initialize(definition, name)
-        @definitions = [definition]
-        @name = name
-        super()
-      end
-
-      def type
-        :undefined
+    class Undefined < NamedObject
+      def initialize(name, parent:, reference:)
+        super(:undefined, name, parent: parent, reference: reference)
       end
     end
   end

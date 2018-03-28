@@ -1,13 +1,14 @@
 module Rbtype
   class CLI
     class Lint
-      def initialize(resolver)
-        @resolver = resolver
+      def initialize(runtime)
+        @runtime = runtime
 
         @classes = [
-          Rbtype::Lint::ConflictingDefinition.new(@resolver),
-          Rbtype::Lint::MissingDefinition.new(@resolver),
-          #Rbtype::Lint::UnresolvedReference.new(@resolver),
+          Rbtype::Lint::MissingDefinition.new(@runtime),
+          Rbtype::Lint::LoadOrder.new(@runtime),
+          Rbtype::Lint::LexicalPathMismatch.new(@runtime),
+          Rbtype::Lint::NestingMismatch.new(@runtime),
         ]
       end
 

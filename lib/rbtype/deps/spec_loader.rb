@@ -5,8 +5,10 @@ require 'rubygems'
 module Rbtype
   module Deps
     class SpecLoader
-      def initialize(spec)
+      def initialize(spec, ignore_errors: false, cache: nil)
         @spec = spec
+        @ignore_errors = ignore_errors
+        @cache = cache
       end
 
       def sources
@@ -23,7 +25,8 @@ module Rbtype
             Dir[glob],
             relative_path: path,
             relative_name: short_name,
-            ignore_errors: true
+            ignore_errors: @ignore_errors,
+            cache: @cache,
           )
         end
       end
@@ -35,7 +38,8 @@ module Rbtype
           spec_files,
           relative_path: source_pathname.realpath,
           relative_name: short_name,
-          ignore_errors: true
+          ignore_errors: @ignore_errors,
+          cache: @cache,
         )
       end
 

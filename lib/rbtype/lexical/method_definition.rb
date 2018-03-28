@@ -9,7 +9,7 @@ module Rbtype
 
       def initialize(node, receiver_ref, method_name, lexical_parent)
         @receiver_ref = receiver_ref
-        super(node, method_name, nil, lexical_parent)
+        super(:method_definition, node, method_name, nil, lexical_parent)
       end
 
       def self.from_node(node, resolver:, lexical_parent:)
@@ -28,14 +28,14 @@ module Rbtype
       end
 
       def nesting
-        lexical_parent.nesting
+        @nesting ||= lexical_parent.nesting
       end
 
       def self.receiver_reference(node)
         return unless node
         if node.type == :const
           ConstReference.from_node(node)
-        elsif [:send, :lvar].include?(node.type)
+        elsif [:send, :lvar, :cvar].include?(node.type)
           ReceiverReference.from_node(node)
         elsif node.type == :self
           SelfReference.from_node(node)
