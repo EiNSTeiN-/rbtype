@@ -1,6 +1,6 @@
 module Rbtype
   class ProcessedSource
-    attr_reader :buffer, :lexical_context
+    attr_reader :buffer
 
     class Builder < ::Parser::Builders::Default
       def n(type, children, source_map)
@@ -17,6 +17,10 @@ module Rbtype
 
     def ast
       @ast ||= parse
+    end
+
+    def ast_loaded?
+      !@ast.nil?
     end
 
     def filename
@@ -59,7 +63,6 @@ module Rbtype
         buffer: @buffer,
         parser_klass: @parser_klass,
         ast: @ast,
-        lexical_context: @lexical_context,
       }
     end
 
@@ -68,7 +71,6 @@ module Rbtype
       @buffer = args[:buffer]
       @parser_klass = args[:parser_klass]
       @ast = args[:ast]
-      @lexical_context = args[:lexical_context]
     end
 
     private

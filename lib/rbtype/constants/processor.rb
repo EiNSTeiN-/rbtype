@@ -43,6 +43,8 @@ module Rbtype
       end
 
       class Processor < ::AST::Processor
+        class NameError < ::NameError; end
+
         def initialize(store)
           super()
           @store = store
@@ -81,16 +83,14 @@ module Rbtype
             group = find_group(definition.full_path.join(name))
             return group if group
           end
-          group = find_group(Constants::ConstReference.base.join(name))
-          @store.runtime_loader.raise_with_backtrace!(NameError.new("uninitialized constant: #{name}")) unless group
-          group
+          find_on_constant(Constants::ConstReference.base, name)
         end
 
         def find_on_constant(current, path)
           wanted = current.join(path[0])
           group = find_group(wanted)
           unless group
-            @store.runtime_loader.raise_with_backtrace!(NameError.new("uninitialized constant: #{wanted}"))
+            @store.runtime_loader.raise_with_backtrace!(Processor::NameError.new("uninitialized constant: #{wanted}"))
           end
           if path.size == 1
             group
@@ -104,9 +104,11 @@ module Rbtype
             group = find_on_constant(Constants::ConstReference.base, path.without_explicit_base)
           else
             group = find_on_nesting(parent&.nesting, path[0])
-            group = find_on_constant(group.full_path, path[1..-1]) if path.size > 1
+            if group && path.size > 1
+              group = find_on_constant(group.full_path, path[1..-1])
+            end
           end
-          @store.add_use(node, group)
+          @store.add_use(node, group) if group
           group
         end
 
@@ -132,6 +134,8 @@ module Rbtype
               process_all(node)
             end
           end
+        rescue Processor::NameError => e
+          puts "#{e}: #{backtrace_line(node)} -- namespace may be incomplete"
         end
         alias :on_module :on_class
 
@@ -147,7 +151,7 @@ module Rbtype
                 else
                   @store.require_relative(filename)
                 end
-                @store.requires << found
+                @store.requires << found if found
               end
             end
           end

@@ -26,6 +26,7 @@ require 'rbtype/processors/type_identity'
 require 'rbtype/processors/instantiation_tagger'
 require 'rbtype/processors/const_reference_tagger'
 
+require 'rbtype/source_set'
 require 'rbtype/processed_source'
 require 'rbtype/cache'
 require 'rbtype/version'

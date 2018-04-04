@@ -29,6 +29,7 @@ module Rbtype
       @constants = []
       @files = []
       @lint_all_files = false
+      @require_paths = []
     end
 
     def run(args = ARGV)
@@ -45,6 +46,7 @@ module Rbtype
       end
 
       prepare_cache
+      @source_set = Rbtype::SourceSet.new(cache: @cache)
 
       puts "Loading #{gems.specs.size} gems..."
       locations = require_locations
@@ -56,7 +58,8 @@ module Rbtype
       @runtime.load_sources(typedefs)
       puts "Requiring gems..."
       requires.each do |name|
-        puts "Require #{name}..."
+        line = "require '#{name}'"
+        puts "`#{line.green}`"
         @runtime.require_name(name)
       end
       puts "Done!"
@@ -82,6 +85,8 @@ module Rbtype
     rescue => e
       warn "#{e.class}: #{e.message}\n#{e.backtrace.join("\n")}".red
       false
+    ensure
+      @source_set.save_cache if @source_set
     end
 
     private
@@ -92,28 +97,26 @@ module Rbtype
       @cache = Rbtype::Cache.new(path)
     end
 
-    def build_file_loader(base, files, name)
-      loader = Deps::FileLoader.new(
+    def build_file_loader(files)
+      Deps::FileLoader.new(
         files,
-        relative_path: base,
-        relative_name: '(rbtype)',
-        cache: @cache,
+        source_set: @source_set,
       )
     end
 
     def requires
-      gems.requires.values.flatten
+      gems.ordered_requires.values.flatten
     end
 
     def typedefs
       basepath = File.expand_path(File.dirname(__FILE__))
       files = [File.join(basepath, 'ruby-typedef.rb')]
-      loader = build_file_loader(basepath, files, '(rbtype)')
+      loader = build_file_loader(files)
       loader.sources
     end
 
     def app_sources
-      loader = build_file_loader(Dir.pwd, files, '(app)')
+      loader = build_file_loader(files)
       loader.sources
     end
 
@@ -124,14 +127,23 @@ module Rbtype
         .select { |path| Dir.exist?(path) }
       missing.map do |path|
         files = Dir["#{path}/**/*.rb"]
-        loader = build_file_loader(path, files, nil)
+        loader = build_file_loader(files)
+        Deps::RequireLocation.new(path, loader.sources)
+      end
+    end
+
+    def explicit_require_locations
+      @require_paths.map do |path|
+        expanded = File.expand_path(path)
+        files = Dir["#{expanded}/**/*.rb"]
+        loader = build_file_loader(files)
         Deps::RequireLocation.new(path, loader.sources)
       end
     end
 
     def spec_loaders
       @spec_loaders ||= gems.specs.map do |spec|
-        Deps::SpecLoader.new(spec, ignore_errors: true, cache: @cache)
+        Deps::SpecLoader.new(spec, ignore_errors: true, source_set: @source_set)
       end
     end
 
@@ -161,6 +173,7 @@ module Rbtype
       @require_locations ||= [
         *environment_require_locations,
         *spec_require_locations,
+        *explicit_require_locations,
       ].reject { |loc| loc.sources.size == 0 }
     end
 
@@ -249,6 +262,10 @@ module Rbtype
 
         opts.on("--lint-all-files", "When running --lint, consider gem sources as part of the scope") do |config|
           @lint_all_files = config
+        end
+
+        opts.on("--require-path [pathname]", "Files to parse") do |config|
+          @require_paths << config
         end
 
         opts.on_tail("-h", "--help", "Show this message") do

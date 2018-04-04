@@ -5,10 +5,10 @@ require 'rubygems'
 module Rbtype
   module Deps
     class SpecLoader
-      def initialize(spec, ignore_errors: false, cache: nil)
+      def initialize(spec, ignore_errors: false, source_set: nil)
         @spec = spec
         @ignore_errors = ignore_errors
-        @cache = cache
+        @source_set = source_set
       end
 
       def name
@@ -16,7 +16,7 @@ module Rbtype
       end
 
       def sources
-        [
+        @sources ||= [
           require_path_loaders.map(&:sources),
           *source_loader&.sources,
         ].flatten.compact
@@ -27,10 +27,8 @@ module Rbtype
           glob = "#{path}/**/*.rb"
           FileLoader.new(
             Dir[glob],
-            relative_path: path,
-            relative_name: short_name,
             ignore_errors: @ignore_errors,
-            cache: @cache,
+            source_set: @source_set,
           )
         end
       end
@@ -40,10 +38,8 @@ module Rbtype
         spec_files = @spec.files.map{ |f| "#{source_pathname}/#{f}" }.select { |f| f.end_with?('.rb') }
         FileLoader.new(
           spec_files,
-          relative_path: source_pathname.realpath,
-          relative_name: short_name,
           ignore_errors: @ignore_errors,
-          cache: @cache,
+          source_set: @source_set,
         )
       end
 
@@ -56,7 +52,7 @@ module Rbtype
       end
 
       def source_pathname
-        @spec.source.expanded_original_path
+        @spec.full_gem_path
       end
 
       def short_name

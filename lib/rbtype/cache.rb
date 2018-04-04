@@ -6,35 +6,73 @@ module Rbtype
       @path = path
     end
 
-    def with_cache(key, modified, &block)
-      hash = Digest::SHA1.hexdigest(key)
-      filename = @path.join(hash)
-      if File.exist?(filename)
-        if expired?(filename, modified)
-          puts "#{self.class}: cache expired for #{key}"
-        else
-          #puts "#{self.class}: reading cache for #{key}"
-          data = File.read(filename)
-          object = Marshal.load(data) if data != ""
-        end
+    def for_file(source_filename, key:)
+      hash = Digest::SHA1.hexdigest("#{key}:#{source_filename}")
+      cache_filename = @path.join(hash)
+      CacheFile.new(cache_filename, monitored_files: [MonitoredFile.new(source_filename)])
+    end
+
+    class MonitoredFile
+      attr_reader :filename
+
+      def initialize(filename)
+        @filename = filename
       end
 
-      unless object
-        object = yield
-        #puts "#{self.class}: populating cache for #{key} with #{object.inspect}"
+      def mtime
+        File.mtime(filename)
+      end
+    end
+
+    class CacheFile
+      attr_reader :filename, :monitored_files
+
+      def initialize(filename, monitored_files:)
+        @filename = filename
+        @monitored_files = monitored_files
+      end
+
+      def build(&block)
+        if exist?
+          unless expired?
+            object = load_object
+          end
+        end
+
+        unless object
+          object = yield
+          update(object)
+        end
+
+        object
+      end
+
+      def load_object
+        Marshal.load(data) if data != ""
+      end
+
+      def update(object)
         File.open(filename, 'wb') do |f|
           data = Marshal.dump(object)
           f.write(data)
         end
       end
 
-      object
-    end
+      def exist?
+        File.exist?(filename)
+      end
 
-    private
+      def expired?
+        monitored_files.any? do |file|
+          file.mtime > File.mtime(filename)
+        end
+      end
 
-    def expired?(filename, source_modified)
-      source_modified > File.mtime(filename)
+      private
+
+      def data
+        File.read(filename)
+      end
     end
   end
 end

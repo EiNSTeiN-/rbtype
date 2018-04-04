@@ -10,6 +10,7 @@ module Rbtype
         @provided = []
         @required = {}
         @require_loop_detection = []
+        @require_failed = []
         @backtrace = []
         @definitions = {}
       end
@@ -67,10 +68,11 @@ module Rbtype
       end
 
       def require_name(name)
-        return if @provided.include?(name)
+        return if @provided.include?(name) || @require_failed.include?(name)
         source = find(name)
         unless source
-          puts "cannot load such file -- #{name}"
+          puts "#{@backtrace.last}: cannot load such file -- #{name}"
+          @require_failed << name
           return
         end
         load_source(source)
@@ -79,7 +81,7 @@ module Rbtype
       def require_relative(base, name)
         source = find_absolute(base, name)
         unless source
-          puts "cannot load such file -- #{name}"
+          puts "#{@backtrace.last}: cannot load such file -- #{name}"
           return
         end
         load_source(source)
@@ -96,7 +98,7 @@ module Rbtype
           @required[source.filename]
         else
           if @require_loop_detection.include?(source)
-            puts "require loop detected\n#{@backtrace.reverse}"
+            #puts "require loop detected\n#{@backtrace.reverse}"
             #raise_with_backtrace!(LoadError.new("require loop detected"))
             return
           end

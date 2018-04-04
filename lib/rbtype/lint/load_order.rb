@@ -13,7 +13,7 @@ module Rbtype
             actual_path = group.full_path
 
             if actual_path != expected_path
-              nesting = [*definition.parent.nesting.map(&:full_path), Constants::ConstReference.base]
+              nesting = [*definition.parent&.nesting&.map(&:full_path), Constants::ConstReference.base]
               add_error(definition, message: format(
                 "`%s` may be load order dependant. "\
                 "One of its definitions at %s resolves a constant `%s` on the following nestings: "\

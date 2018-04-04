@@ -13,4 +13,16 @@ describe Rbtype::Deps::Gems do
       it { expect(subject.spec('bumblebee')).to eq nil }
     end
   end
+
+  describe 'requires' do
+    context 'has dependent gems' do
+      it { expect(subject.requires).to include 'rbtype' }
+    end
+  end
+
+  describe 'ordered_requires' do
+    context 'has dependent gems' do
+      it { expect(subject.ordered_requires).to include 'rbtype' }
+    end
+  end
 end
