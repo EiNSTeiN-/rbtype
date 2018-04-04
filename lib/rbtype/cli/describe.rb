@@ -1,46 +1,30 @@
 module Rbtype
   class CLI
     class Describe
-      def initialize(runtime, ref)
+      def initialize(runtime, constants:, **options)
         @runtime = runtime
-        @ref = ref
+        @constants = constants
       end
 
       def to_s
-        out = [
-          object.inspect,
-          "Has named defined: #{object&.names}",
-          definitions_descriptions
-        ]
-
-        out.compact.join("\n")
+        @constants.map do |const_ref|
+          group = @runtime.find_const_group(const_ref)
+          if group
+            namespacing, definitions = group.partition(&:for_namespacing?)
+            [
+              "`#{group.full_path}` has #{definitions.size} relevant definition(s):",
+              *locations(definitions),
+              "`#{group.full_path}` is (re-)opened #{namespacing.size} time(s) for namespacing:",
+              *locations(namespacing),
+            ]
+          else
+            "`#{const_ref}`: not a known name"
+          end
+        end.flatten.compact.join("\n")
       end
 
-      def definitions_descriptions
-        if definitions == nil
-          "`#{@ref}` is not a known name"
-        elsif definitions.empty?
-          "`#{@ref}` has no definitions"
-        else
-          descriptions = definitions.map { |d| description(d) }
-          <<~EOS
-            `#{@ref}` has #{definitions.size} definitions:
-             - #{descriptions.join("\n - ")}
-          EOS
-        end
-      end
-
-      def description(definition)
-        loc = definition.location
-        "a #{friendly_name(definition)} at #{loc.source_buffer.name}:#{loc.line}"
-      end
-
-      def definitions
-        object&.definitions
-      end
-
-      def object
-        @object ||= @runtime.find_const(@ref)
+      def locations(group)
+        group.map { |defn| "  - `#{defn.source_line}` at #{defn.format_location}" }
       end
     end
   end

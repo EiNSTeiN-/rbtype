@@ -11,11 +11,15 @@ module Rbtype
         @cache = cache
       end
 
+      def name
+        @spec.name
+      end
+
       def sources
         [
           require_path_loaders.map(&:sources),
-          source_loader&.sources,
-        ].flatten
+          *source_loader&.sources,
+        ].flatten.compact
       end
 
       def require_path_loaders

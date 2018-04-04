@@ -5,12 +5,21 @@ module Rbtype
     class Base
       attr_reader :errors
 
-      def initialize(runtime)
+      def initialize(runtime, options)
         @runtime = runtime
+        @constants = options[:constants]
+        @files = options[:files]
+        @lint_all_files = options[:lint_all_files]
         @errors = []
       end
 
       private
+
+      def relevant_group?(group)
+        @lint_all_files ||
+          @constants.include?(group.full_path) ||
+          group.to_a.any? { |definition| !definition.for_namespacing? && @files.include?(definition.source.filename) }
+      end
 
       def sources
         @runtime.sources
@@ -24,25 +33,9 @@ module Rbtype
         @errors << Error.new(self, subject, message)
       end
 
-      def traverse(object = @runtime.top_level, &block)
-        block.call(object)
-        object.each do |_, child|
-          traverse(child, &block)
-        end
-      end
-
-      def traverse_definitions(&block)
-        sources.each do |source|
-          traverse_lexical_context_definitions(source.lexical_context, &block)
-        end
-      end
-
-      def traverse_lexical_context_definitions(context, &block)
-        block.call(context)
-        if context.respond_to?(:definitions)
-          context.definitions.each do |subcontext|
-            traverse_lexical_context_definitions(subcontext, &block)
-          end
+      def traverse(&block)
+        @runtime.definitions.each do |_, child|
+          block.call(child)
         end
       end
 
@@ -51,11 +44,6 @@ module Rbtype
           "- ",
           list.join("\n- ")
         ].join
-      end
-
-      def format_location(definition)
-        loc = definition.location
-        "#{loc.source_buffer.name}:#{loc.line}"
       end
     end
   end

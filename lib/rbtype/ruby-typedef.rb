@@ -25,3 +25,9 @@ class NoMethodError < NameError
 end
 class StringIO
 end
+
+class Random
+end
+
+module Process
+end

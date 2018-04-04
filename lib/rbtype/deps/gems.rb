@@ -10,7 +10,11 @@ module Rbtype
       end
 
       def specs
-        @gemfile.locked_gems.specs.map(&:__materialize__)
+        @specs ||= @gemfile.locked_gems.specs.map(&:__materialize__)
+      end
+
+      def requires
+        @requires ||= @gemfile.requires
       end
 
       def spec(name)

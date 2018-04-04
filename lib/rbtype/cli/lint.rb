@@ -1,14 +1,14 @@
 module Rbtype
   class CLI
     class Lint
-      def initialize(runtime)
+      def initialize(runtime, **options)
         @runtime = runtime
 
         @classes = [
-          Rbtype::Lint::MissingDefinition.new(@runtime),
-          Rbtype::Lint::LoadOrder.new(@runtime),
-          Rbtype::Lint::LexicalPathMismatch.new(@runtime),
-          Rbtype::Lint::NestingMismatch.new(@runtime),
+          Rbtype::Lint::LexicalPathMismatch.new(@runtime, **options),
+          Rbtype::Lint::ExplicitBase.new(@runtime, **options),
+          Rbtype::Lint::MultipleDefinitions.new(@runtime, **options),
+          Rbtype::Lint::LoadOrder.new(@runtime, **options),
         ]
       end
 

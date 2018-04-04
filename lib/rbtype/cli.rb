@@ -4,34 +4,41 @@ require 'rbtype'
 require 'optparse'
 require 'colorize'
 
+require_relative 'cli/definitions'
 require_relative 'cli/describe'
 require_relative 'cli/nesting'
 require_relative 'cli/lint'
-require_relative 'cli/ancestors'
+require_relative 'cli/uses'
 
 module Rbtype
   class CLI
     class ExitWithFailure < RuntimeError; end
     class ExitWithSuccess < RuntimeError; end
 
+    ACTIONS = {
+      definitions: Rbtype::CLI::Definitions,
+      describe: Rbtype::CLI::Describe,
+      lint: Rbtype::CLI::Lint,
+      nesting: Rbtype::CLI::Nesting,
+      uses: Rbtype::CLI::Uses,
+    }
+
     def initialize
       @options = {}
       @actions = []
-      @targets = []
+      @constants = []
       @files = []
-      @load_gems = false
+      @lint_all_files = false
     end
 
     def run(args = ARGV)
       load_options(args)
 
-      @targets.push(*args)
-
-      if files.empty?
-        success!("no files given...\n#{option_parser}")
+      if files.empty? && constants.empty?
+        success!("specify either --file or --const...\n#{option_parser}")
       end
 
-      ensure_files_exist(files)
+      ensure_files_exist
 
       if @actions.empty?
         success!("no actions to perform...\n#{option_parser}")
@@ -39,20 +46,30 @@ module Rbtype
 
       prepare_cache
 
-      puts "Loading sources..."
-      sources = [
-        *typedefs,
-        *app_sources(files),
-        *(dependencies_sources if @load_gems),
-      ].flatten.compact
+      puts "Loading #{gems.specs.size} gems..."
+      locations = require_locations
 
       puts "Building runtime..."
-      @runtime = Runtime::Runtime.from_sources(sources)
+      @runtime = Deps::RuntimeLoader.new(locations)
+      @runtime.provided('thread')
+      puts "Loading typedefs..."
+      @runtime.load_sources(typedefs)
+      puts "Requiring gems..."
+      requires.each do |name|
+        puts "Require #{name}..."
+        @runtime.require_name(name)
+      end
       puts "Done!"
+
+      if files.size > 0
+        puts "Loading #{files.size} files"
+        @runtime.load_sources(app_sources)
+        puts "Done!"
+      end
 
       puts "Running linters..."
       @actions.each do |action|
-        send("run_action_#{action}", @targets)
+        run_action(action)
       end
 
       true
@@ -75,50 +92,76 @@ module Rbtype
       @cache = Rbtype::Cache.new(path)
     end
 
-    def typedefs
-      basepath = File.expand_path(File.dirname(__FILE__))
+    def build_file_loader(base, files, name)
       loader = Deps::FileLoader.new(
-        [
-          File.join(basepath, 'ruby-typedef')
-        ],
-        relative_path: basepath,
+        files,
+        relative_path: base,
         relative_name: '(rbtype)',
         cache: @cache,
       )
-      begin
-        loader.sources
-      rescue => e
-        warn "Error while loading app: #{e}".red
-        raise
+    end
+
+    def requires
+      gems.requires.values.flatten
+    end
+
+    def typedefs
+      basepath = File.expand_path(File.dirname(__FILE__))
+      files = [File.join(basepath, 'ruby-typedef.rb')]
+      loader = build_file_loader(basepath, files, '(rbtype)')
+      loader.sources
+    end
+
+    def app_sources
+      loader = build_file_loader(Dir.pwd, files, '(app)')
+      loader.sources
+    end
+
+    def environment_require_locations
+      paths = %x(ruby -e 'puts $:').split("\n")
+      missing = paths
+        .reject { |path| spec_load_paths.include?(path) }
+        .select { |path| Dir.exist?(path) }
+      missing.map do |path|
+        files = Dir["#{path}/**/*.rb"]
+        loader = build_file_loader(path, files, nil)
+        Deps::RequireLocation.new(path, loader.sources)
       end
     end
 
-    def app_sources(files)
-      loader = Deps::FileLoader.new(
-        files,
-        relative_path: Dir.pwd,
-        relative_name: '(pwd)',
-        cache: @cache,
-      )
-      begin
-        loader.sources
-      rescue => e
-        warn "Error while loading app: #{e}".red
-        raise
+    def spec_loaders
+      @spec_loaders ||= gems.specs.map do |spec|
+        Deps::SpecLoader.new(spec, ignore_errors: true, cache: @cache)
       end
     end
 
-    def dependencies_sources
-      gems = Deps::Gems.new(gemfile, lockfile)
-      gems.specs.map do |spec|
-        spec_loader = Deps::SpecLoader.new(spec, ignore_errors: true, cache: @cache)
-        begin
-          spec_loader.sources
-        rescue => e
-          warn "Error while dependency #{spec_loader.short_name}: #{e}".red
-          raise
-        end
+    def spec_load_paths
+      @spec_load_paths ||= spec_loaders.map do |spec_loader|
+        spec_loader.full_require_paths || []
+      end.flatten
+    end
+
+    def spec_require_locations
+      @spec_require_locations ||= begin
+        spec_loaders.map do |spec_loader|
+          begin
+            locations = spec_loader.full_require_paths.map do |path|
+              sources = spec_loader.sources.select { |source| source.filename.start_with?(path) }
+              Deps::RequireLocation.new(path, sources)
+            end
+          rescue => e
+            warn "Error while dependency #{spec_loader.short_name}: #{e}".red
+            raise
+          end
+        end.flatten
       end
+    end
+
+    def require_locations
+      @require_locations ||= [
+        *environment_require_locations,
+        *spec_require_locations,
+      ].reject { |loc| loc.sources.size == 0 }
     end
 
     def gemfile
@@ -129,40 +172,23 @@ module Rbtype
       Bundler::SharedHelpers.default_lockfile
     end
 
-    def run_action_describe(targets)
-      targets.each do |target|
+    def gems
+      @gems ||= Deps::Gems.new(gemfile, lockfile)
+    end
+
+    def action_options
+      { constants: constants, files: files, lint_all_files: @lint_all_files }
+    end
+
+    def run_action(name)
+      klass = ACTIONS[name]
+      if klass
         puts
-        puts "---- describe @ #{target} ----"
-        ref = build_const_name(target)
-        puts Describe.new(@runtime, ref)
+        puts "---- #{name} ----"
+        puts klass.new(@runtime, **action_options)
+      else
+        failure!("No such action: #{name}")
       end
-    end
-
-    def run_action_nesting(targets)
-      targets.each do |target|
-        puts
-        puts "---- nesting @ #{target} ----"
-        ref = build_const_name(target)
-        puts Nesting.new(@runtime, ref)
-      end
-    end
-
-    def run_action_ancestors(targets)
-      targets.each do |target|
-        puts
-        puts "---- ancestors @ #{target} ----"
-        ref = build_const_name(target)
-        puts Ancestors.new(@runtime, ref)
-      end
-    end
-
-    def run_action_lint(_)
-      puts Lint.new(@runtime)
-    end
-
-    def build_const_name(target)
-      parts = target.split('::', -1).map { |part| part&.to_sym }
-      Lexical::ConstReference.new(parts)
     end
 
     def load_options(args)
@@ -176,6 +202,17 @@ module Rbtype
         .map { |f| File.expand_path(f, Dir.pwd) }
     end
 
+    def constants
+      @constants.map do |name|
+        ref = Constants::ConstReference.from_string(name)
+        if ref.explicit_base?
+          ref
+        else
+          Constants::ConstReference.base.join(ref)
+        end
+      end
+    end
+
     def failure!(msg)
       raise ExitWithFailure, msg
     end
@@ -184,7 +221,7 @@ module Rbtype
       raise ExitWithSuccess, msg
     end
 
-    def ensure_files_exist(files)
+    def ensure_files_exist
       files.each do |filename|
         unless File.exist?(filename)
           failure!("#{filename}: does not exist")
@@ -200,28 +237,18 @@ module Rbtype
           @files << config
         end
 
-        opts.on("--target [const]", "Constants to run actions against") do |config|
-          @targets << config
+        opts.on("--const [const]", "Constants to run actions against") do |config|
+          @constants << config
         end
 
-        opts.on("--describe", "Describe the target") do |config|
-          @actions << :describe
+        ACTIONS.keys.each do |action|
+          opts.on("--#{action}", "Run '#{action}' on given files or constants") do |config|
+            @actions << action
+          end
         end
 
-        opts.on("--lint", "Lint") do |config|
-          @actions << :lint
-        end
-
-        opts.on("--nesting", "Describe the target") do |config|
-          @actions << :nesting
-        end
-
-        opts.on("--ancestors", "Display the target's ancestors tree") do |config|
-          @actions << :ancestors
-        end
-
-        opts.on("--load-gems", "Load gems before analysis") do |config|
-          @load_gems = true
+        opts.on("--lint-all-files", "When running --lint, consider gem sources as part of the scope") do |config|
+          @lint_all_files = config
         end
 
         opts.on_tail("-h", "--help", "Show this message") do

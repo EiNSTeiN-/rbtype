@@ -1,6 +1,6 @@
 module Rbtype
   class ProcessedSource
-    attr_reader :buffer, :ast, :lexical_context
+    attr_reader :buffer, :lexical_context
 
     class Builder < ::Parser::Builders::Default
       def n(type, children, source_map)
@@ -12,8 +12,11 @@ module Rbtype
       @relative_path = relative_path
       @buffer = buffer
       @parser_klass = parser_klass
-      @ast = parse
-      @lexical_context = build_lexical_context
+      @ast = nil
+    end
+
+    def ast
+      @ast ||= parse
     end
 
     def filename
@@ -31,7 +34,11 @@ module Rbtype
     end
 
     def friendly_filename
-      filename.sub("#{@relative_path}/", '')
+      if @relative_path
+        filename.sub("#{@relative_path}/", '')
+      else
+        filename
+      end
     end
 
     def raw_content
@@ -78,12 +85,6 @@ module Rbtype
 
     def parse
       parser.parse(@buffer) unless raw_content.empty?
-    end
-
-    def build_lexical_context
-      lexical_context = Lexical::UnnamedContext.new(:top_level, nil)
-      Lexical::Resolver.from_node(ast, lexical_parent: lexical_context) if ast
-      lexical_context
     end
   end
 end

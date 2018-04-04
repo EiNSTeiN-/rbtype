@@ -1,7 +1,5 @@
-require_relative 'expression'
-
 module Rbtype
-  module Lexical
+  module Constants
     class ConstReference
       attr_reader :parts
 
@@ -20,6 +18,11 @@ module Rbtype
 
       def self.base
         new([nil])
+      end
+
+      def self.from_string(string)
+        parts = string.split('::', -1).map { |part| part == "" ? nil : part&.to_sym }
+        new(parts)
       end
 
       def self.from_node(node)

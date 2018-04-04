@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 require 'rbtype'
-require 'rbtype/lexical/const_reference'
+require 'rbtype/constants/const_reference'
 require 'rbtype/lexical/instance_reference'
 require 'rbtype/type/union_reference'
 
@@ -17,7 +17,7 @@ module Support
     end
 
     def const_ref(*parts)
-      Rbtype::Lexical::ConstReference.new(parts)
+      Rbtype::Constants::ConstReference.new(parts)
     end
 
     def union_ref(*members)

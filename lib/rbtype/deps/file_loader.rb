@@ -1,3 +1,4 @@
+require 'rubygems'
 require 'bundler'
 require 'bundler/dsl'
 require 'rubygems'

@@ -1,35 +1,34 @@
 module Rbtype
   class CLI
     class Nesting
-      def initialize(resolver, ref)
-        @resolver = resolver
-        @ref = ref
+      def initialize(runtime, constants:, **options)
+        @runtime = runtime
+        @constants = constants
       end
 
       def to_s
-        if definitions == nil
-          "`#{@ref}` is not a known name"
-        elsif definitions.empty?
-          "`#{@ref}` has no definitions"
-        else
-          descriptions = definitions.map { |d| description(d) }
-          <<~EOS
-            `#{@ref}` has #{definitions.size} definitions:
-             #{descriptions.join(" ")}
-          EOS
-        end
+        @constants.map do |const_ref|
+          group = @runtime.find_const_group(const_ref)
+          if group
+            <<~EOS
+              `#{group.full_path}` has #{group.size} definition(s):
+               #{descriptions(group).join(" ")}
+            EOS
+          else
+            "`#{const_ref}` is not a known name"
+          end
+        end.join("\n")
       end
 
-      def description(definition)
-        loc = definition.location
+      def description(defn)
         <<~EOS
-          - at #{loc.source_buffer.name}:#{loc.line}
-             #{definition.nesting.map(&:to_s).join(' -> ')}
+          - at #{defn.format_location}
+             #{defn.nesting.map(&:full_path).join(' -> ')}
         EOS
       end
 
-      def definitions
-        @definitions ||= @resolver.resolve_definitions(@ref)
+      def descriptions(group)
+        group.map { |defn| description(defn) }
       end
     end
   end

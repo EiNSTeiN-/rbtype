@@ -14,7 +14,7 @@ module Rbtype
       end
 
       def const_ref(*const)
-        Rbtype::Lexical::ConstReference.new(const)
+        Rbtype::Constants::ConstReference.new(const)
       end
 
       def union_ref(*members)

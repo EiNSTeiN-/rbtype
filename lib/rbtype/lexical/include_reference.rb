@@ -1,5 +1,3 @@
-require_relative 'const_reference'
-
 module Rbtype
   module Lexical
     class IncludeReference
