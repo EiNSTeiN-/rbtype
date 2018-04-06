@@ -7,8 +7,11 @@ module Rbtype
         @classes = [
           Rbtype::Lint::LexicalPathMismatch.new(@runtime, **options),
           Rbtype::Lint::ExplicitBase.new(@runtime, **options),
-          Rbtype::Lint::MultipleDefinitions.new(@runtime, **options),
+          #Rbtype::Lint::MultipleDefinitions.new(@runtime, **options),
           Rbtype::Lint::LoadOrder.new(@runtime, **options),
+          Rbtype::Lint::MissingConstant.new(@runtime, **options),
+          Rbtype::Lint::Rails::AutoloadConstants.new(@runtime, **options),
+          Rbtype::Lint::Rails::RequireAutoloadableFile.new(@runtime, **options),
         ]
       end
 

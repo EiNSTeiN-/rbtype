@@ -21,6 +21,10 @@ module Rbtype
           group.to_a.any? { |definition| !definition.for_namespacing? && @files.include?(definition.source.filename) }
       end
 
+      def relevant_filename?(filename)
+        @lint_all_files || @files.include?(filename)
+      end
+
       def sources
         @runtime.sources
       end

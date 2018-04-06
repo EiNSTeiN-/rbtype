@@ -6,30 +6,60 @@ module Rbtype
       @path = path
     end
 
-    def for_file(source_filename, key:)
-      hash = Digest::SHA1.hexdigest("#{key}:#{source_filename}")
-      cache_filename = @path.join(hash)
-      CacheFile.new(cache_filename, monitored_files: [MonitoredFile.new(source_filename)])
+    def for_file(source_filename, key_prefix:)
+      cache_filename = build_filename("#{key_prefix}:#{source_filename}")
+      comparators = [FileComparator.new(source_filename, cache_filename)]
+      CacheFile.new(cache_filename, comparators: comparators)
     end
 
-    class MonitoredFile
-      attr_reader :filename
+    def build(key, comparators: nil)
+      cache_filename = build_filename(key)
+      CacheFile.new(cache_filename, comparators: comparators)
+    end
 
-      def initialize(filename)
-        @filename = filename
+    def build_filename(key)
+      hash = Digest::SHA1.hexdigest(key)
+      @path.join(hash)
+    end
+
+    class FileComparator
+      attr_reader :source_filename, :compare_filename
+
+      def initialize(source_filename, compare_filename)
+        @source_filename = source_filename
+        @compare_filename = compare_filename
       end
 
-      def mtime
-        File.mtime(filename)
+      def source_changed?
+        if can_compare?
+          source_mtime > compare_mtime
+        else
+          true
+        end
+      end
+
+      private
+
+      def source_mtime
+        File.mtime(source_filename)
+      end
+
+      def compare_mtime
+        File.mtime(compare_filename)
+      end
+
+      def can_compare?
+        File.exists?(source_filename) &&
+          File.exists?(compare_filename)
       end
     end
 
     class CacheFile
-      attr_reader :filename, :monitored_files
+      attr_reader :filename, :comparators
 
-      def initialize(filename, monitored_files:)
+      def initialize(filename, comparators: nil)
         @filename = filename
-        @monitored_files = monitored_files
+        @comparators = comparators || []
       end
 
       def build(&block)
@@ -49,6 +79,8 @@ module Rbtype
 
       def load_object
         Marshal.load(data) if data != ""
+      rescue ArgumentError
+        nil
       end
 
       def update(object)
@@ -63,8 +95,8 @@ module Rbtype
       end
 
       def expired?
-        monitored_files.any? do |file|
-          file.mtime > File.mtime(filename)
+        comparators.any? do |cmp|
+          cmp.source_changed?
         end
       end
 

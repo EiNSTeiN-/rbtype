@@ -1,11 +1,12 @@
 require_relative 'use'
 require_relative 'definition'
 require_relative 'definition_group'
+require_relative 'missing_constant'
 
 module Rbtype
   module Constants
     class Processor
-      attr_reader :runtime_loader, :source, :requires, :definitions, :uses
+      attr_reader :runtime_loader, :source, :requires, :definitions, :uses, :missings
 
       def initialize(runtime_loader, source)
         @runtime_loader = runtime_loader
@@ -14,6 +15,7 @@ module Rbtype
         @requires = []
         @definitions = {}
         @uses = {}
+        @missings = {}
         run
       end
 
@@ -32,6 +34,12 @@ module Rbtype
         @definitions[definition.full_path] ||= DefinitionGroup.new(definition.full_path)
         @definitions[definition.full_path] << definition
         @runtime_loader.add_definition(definition)
+      end
+
+      def add_missing_constant(const_ref)
+        @missings[const_ref] ||= MissingConstant.new(const_ref)
+        @missings[const_ref].sources << source
+        @runtime_loader.add_missing_constant(const_ref, source)
       end
 
       def require_name(name)
@@ -75,21 +83,32 @@ module Rbtype
         end
 
         def find_group(name)
-          @store.runtime_loader.find_const_group(name)
+          @store.runtime_loader.find_const_group(name) ||
+            @store.runtime_loader.autoload_constant(name)
         end
 
         def find_on_nesting(nestings, name)
           nestings&.each do |definition|
-            group = find_group(definition.full_path.join(name))
-            return group if group
+            maybe_const = definition.full_path.join(name)
+            group = find_group(maybe_const)
+            if group
+              return group
+            else
+              @store.add_missing_constant(maybe_const)
+            end
           end
-          find_on_constant(Constants::ConstReference.base, name)
+          group = find_on_constant(Constants::ConstReference.base, name)
+          unless group
+            @store.add_missing_constant(maybe_const)
+          end
+          group
         end
 
         def find_on_constant(current, path)
           wanted = current.join(path[0])
           group = find_group(wanted)
           unless group
+            @store.add_missing_constant(wanted)
             @store.runtime_loader.raise_with_backtrace!(Processor::NameError.new("uninitialized constant: #{wanted}"))
           end
           if path.size == 1

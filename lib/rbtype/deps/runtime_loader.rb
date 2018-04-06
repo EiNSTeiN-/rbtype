@@ -3,16 +3,21 @@ require_relative 'required_file'
 module Rbtype
   module Deps
     class RuntimeLoader
-      attr_reader :definitions
+      attr_reader :required, :definitions, :missings, :rails_automatic_modules, :rails_autoloaded_constants
+      attr_accessor :rails_autoload_locations
 
-      def initialize(require_locations)
+      def initialize(require_locations, rails_autoload_locations)
         @require_locations = require_locations
+        @rails_autoload_locations = rails_autoload_locations
         @provided = []
         @required = {}
         @require_loop_detection = []
         @require_failed = []
         @backtrace = []
         @definitions = {}
+        @missings = {}
+        @rails_automatic_modules = []
+        @rails_autoloaded_constants = {}
       end
 
       def provided(name)
@@ -59,8 +64,42 @@ module Rbtype
         @definitions[definition.full_path] << definition
       end
 
+      def add_missing_constant(const_ref, source)
+        @missings[const_ref] ||= Constants::MissingConstant.new(const_ref)
+        @missings[const_ref].sources << source
+      end
+
+      def add_automatic_module(const_ref)
+        @rails_automatic_modules << const_ref
+        @definitions[const_ref] ||= Constants::DefinitionGroup.new(const_ref)
+      end
+
       def find_const_group(name)
         @definitions[name]
+      end
+
+      def define_rails_automatic_module?(name)
+        @rails_autoload_locations.any? { |location| location.matching_folder?(name) }
+      end
+
+      def autoload_constant(const_ref)
+        source = @rails_autoload_locations.find do |location|
+          location.find_autoloaded_file(const_ref)
+        end
+        if source
+          puts "found #{const_ref} -> #{source}"
+          load_source(source)
+          group = find_const_group(const_ref)
+          if group
+            @rails_autoloaded_constants[source.filename] = const_ref
+          else
+            puts "#{@backtrace.last}: loaded #{source} expecting to find #{const_ref} but that failed"
+          end
+          group
+        elsif define_rails_automatic_module?(const_ref)
+          puts "creating automatic module for #{const_ref}"
+          add_automatic_module(const_ref)
+        end
       end
 
       def required_source?(source)

@@ -2,12 +2,14 @@ module Rbtype
   class SourceSet
     def initialize(cache:)
       @cache = cache
-      @map = {}
+      @cache_file = @cache.build("#{self.class}.cache_file")
+      #@map = @cache_file.load_object if @cache_file.exist?
+      @map ||= {}
     end
 
     def load_source(filename)
       cached_source = @map[filename]
-      unless cached_source
+      if !cached_source || cached_source.expired?
         cached_source = build_cached_source(filename)
         @map[filename] = cached_source
       end
@@ -18,6 +20,7 @@ module Rbtype
       @map.each do |_, cached_source|
         cached_source.update
       end
+      #@cache_file.update(@map)
     end
 
     class CachedSource
@@ -34,12 +37,16 @@ module Rbtype
           @cache_file.update(processed_source)
         end
       end
+
+      def expired?
+        @cache_file.expired?
+      end
     end
 
     private
 
     def build_cached_source(filename)
-      cache_file = @cache.for_file(filename, key: "processed-source")
+      cache_file = @cache.for_file(filename, key_prefix: "processed-source")
       source = cache_file.build do
         buffer = build_buffer(filename)
         Rbtype::ProcessedSource.new(buffer, ::Parser::Ruby24)

@@ -30,6 +30,7 @@ module Rbtype
       @files = []
       @lint_all_files = false
       @require_paths = []
+      @rails_autoload_paths = []
     end
 
     def run(args = ARGV)
@@ -45,6 +46,7 @@ module Rbtype
         success!("no actions to perform...\n#{option_parser}")
       end
 
+      puts "Preparing cache..."
       prepare_cache
       @source_set = Rbtype::SourceSet.new(cache: @cache)
 
@@ -52,7 +54,7 @@ module Rbtype
       locations = require_locations
 
       puts "Building runtime..."
-      @runtime = Deps::RuntimeLoader.new(locations)
+      @runtime = Deps::RuntimeLoader.new(locations, [])
       @runtime.provided('thread')
       puts "Loading typedefs..."
       @runtime.load_sources(typedefs)
@@ -63,6 +65,8 @@ module Rbtype
         @runtime.require_name(name)
       end
       puts "Done!"
+
+      @runtime.rails_autoload_locations = rails_autoload_locations
 
       if files.size > 0
         puts "Loading #{files.size} files"
@@ -92,7 +96,7 @@ module Rbtype
     private
 
     def prepare_cache
-      path = Pathname.new(Dir.pwd).join('.cache')
+      path = Pathname.new(Dir.pwd).join('tmp/type-cache')
       Dir.mkdir(path) unless File.exist?(path)
       @cache = Rbtype::Cache.new(path)
     end
@@ -116,8 +120,20 @@ module Rbtype
     end
 
     def app_sources
-      loader = build_file_loader(files)
-      loader.sources
+      @app_sources ||= begin
+        loader = build_file_loader(files)
+        loader.sources
+      end
+    end
+
+    def rails_autoload_locations
+      @rails_autoload_sources ||= begin
+        @rails_autoload_paths.map do |path|
+          files = Dir["#{path}/**/*.rb"]
+          loader = build_file_loader(files)
+          Deps::RailsAutoloadLocation.new(path, loader.sources)
+        end
+      end
     end
 
     def environment_require_locations
@@ -266,6 +282,11 @@ module Rbtype
 
         opts.on("--require-path [pathname]", "Files to parse") do |config|
           @require_paths << config
+        end
+
+        opts.on("--rails-autoload-paths [pathname]", "Directories that are registered "\
+            "with Rails autoload functionality and obey autloading rules") do |config|
+          @rails_autoload_paths.concat(config.split(' '))
         end
 
         opts.on_tail("-h", "--help", "Show this message") do
