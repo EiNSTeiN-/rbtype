@@ -83,9 +83,7 @@ module Rbtype
       end
 
       def autoload_constant(const_ref)
-        source = @rails_autoload_locations.find do |location|
-          location.find_autoloaded_file(const_ref)
-        end
+        source = find_autoloaded_file(const_ref)
         if source
           puts "found #{const_ref} -> #{source}"
           load_source(source)
@@ -100,6 +98,14 @@ module Rbtype
           puts "creating automatic module for #{const_ref}"
           add_automatic_module(const_ref)
         end
+      end
+
+      def find_autoloaded_file(const_ref)
+        @rails_autoload_locations.each do |location|
+          source = location.find_autoloaded_file(const_ref)
+          return source if source
+        end
+        nil
       end
 
       def required_source?(source)
