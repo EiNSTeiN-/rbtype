@@ -6,14 +6,17 @@ describe Rbtype::Constants::Processor do
   let(:rails_autoload_locations) { [] }
   let(:runtime_loader) { Rbtype::Deps::RuntimeLoader.new(require_locations, rails_autoload_locations) }
   let(:app_processed_source) { build_processed_source(source, filename: 'test.rb') }
-  let(:processor) { described_class.new(runtime_loader, app_processed_source) }
 
   describe 'requires' do
-    subject { processor.requires }
+    before { runtime_loader.load_source(app_processed_source) }
+    subject { runtime_loader.db.requires }
 
     context 'file does not exist' do
       let(:source) { 'require "foo"' }
-      it { expect{ subject }.to raise_error(LoadError, "cannot load such file -- foo") }
+      it { expect(subject).to_not be_empty }
+      it { expect(runtime_loader.require_failed).to_not be_empty }
+      it { expect(runtime_loader.require_failed.keys).to eq ['foo'] }
+      it { expect(runtime_loader.require_failed.values).to eq [subject[0]] }
     end
 
     context 'file can be loaded from library' do
@@ -27,8 +30,13 @@ describe Rbtype::Constants::Processor do
 
       it { expect(subject).to_not be_empty }
       it { expect(subject.size).to eq 1 }
-      it { expect(subject[0].class).to eq Rbtype::Deps::RequiredFile }
-      it { expect(subject[0].source).to eq lib_processed_source }
+      it { expect(subject[0].class).to eq Rbtype::Constants::Requirement }
+      it { expect(subject[0].relative_directory).to eq '.' }
+      it { expect(subject[0].filename).to eq 'foo' }
+
+      it { expect(runtime_loader.required).to_not be_empty }
+      it { expect(runtime_loader.required.size).to eq 2 }
+      it { expect(runtime_loader.required.keys.sort).to eq ["/lib/foo.rb", "test.rb"].sort }
     end
 
     context 'require loop' do
@@ -40,16 +48,46 @@ describe Rbtype::Constants::Processor do
 
       let(:source) { 'require "foo"' }
 
-      it { expect{ subject }.to raise_error(LoadError, "require loop detected") }
+      it { expect(subject).to_not be_empty }
+      it { expect(subject.size).to eq 3 }
+      it { expect(subject[0].filename).to eq 'foo' }
+      it { expect(subject[0].source_filename).to eq '/lib/bar.rb' }
+      it { expect(subject[1].filename).to eq 'bar' }
+      it { expect(subject[1].source_filename).to eq '/lib/foo.rb' }
+      it { expect(subject[2].filename).to eq 'foo' }
+      it { expect(subject[2].source_filename).to eq 'test.rb' }
+    end
+  end
+
+  describe 'missings' do
+    subject do
+      runtime_loader.load_source(app_processed_source)
+      runtime_loader.db.missings
+    end
+
+    context 'non existant name' do
+      let(:source) { 'class Foo::Bar; end' }
+      it { expect(subject).to_not be_empty }
+      it { expect(subject.size).to eq 1 }
+      it { expect(subject.keys).to eq [const_ref(nil, :Foo)] }
+    end
+
+    context 'initial constant is resolved through nesting but another is not found' do
+      let(:source) { <<~EOF }
+        class Foo
+          class Foo::Bar::Baz; end
+        end
+      EOF
+      it { expect(subject).to_not be_empty }
+      it { expect(subject.size).to eq 2 }
+      it { expect(subject.keys).to eq [const_ref(nil, :Foo, :Foo), const_ref(nil, :Foo, :Bar)] }
     end
   end
 
   describe 'definitions' do
-    subject { processor.definitions }
-
-    context 'non existant name' do
-      let(:source) { 'class Foo::Bar; end' }
-      it { expect{ subject }.to raise_error(NameError, "uninitialized constant: Foo") }
+    subject do
+      runtime_loader.load_source(app_processed_source)
+      runtime_loader.db.definitions
     end
 
     context 'simple module' do
@@ -164,15 +202,6 @@ describe Rbtype::Constants::Processor do
       it { expect(bar_defs[0].nesting).to eq [bar_defs[0], foo_defs[0]] }
     end
 
-    context 'initial constant is resolved through nesting but another is not found' do
-      let(:source) { <<~EOF }
-        class Foo
-          class Foo::Bar::Baz; end
-        end
-      EOF
-      it { expect{ subject }.to raise_error(NameError, "uninitialized constant: ::Foo::Bar") }
-    end
-
     context 'constants referenced in other files' do
       let(:library_path) { '/lib' }
       let(:lib1) { build_processed_source(foo_source, filename: "#{library_path}/foo.rb") }
@@ -187,8 +216,8 @@ describe Rbtype::Constants::Processor do
 
       let(:bar_defs) { subject[const_ref(nil, :Foo, :Bar)] }
 
-      it { expect(subject.size).to eq 1 }
-      it { expect(subject.keys).to eq [const_ref(nil, :Foo, :Bar)] }
+      it { expect(subject.size).to eq 2 }
+      it { expect(subject.keys).to eq [const_ref(nil, :Foo), const_ref(nil, :Foo, :Bar)] }
       it { expect(bar_defs).to_not be_nil }
       it { expect(bar_defs).to_not be_empty }
       it { expect(bar_defs.size).to eq 1 }
@@ -201,7 +230,10 @@ describe Rbtype::Constants::Processor do
   end
 
   describe 'uses' do
-    subject { processor.uses }
+    subject do
+      runtime_loader.load_source(app_processed_source)
+      runtime_loader.db.uses
+    end
 
     context 'class reference of its own lexical parent' do
       let(:source) { <<~EOF }

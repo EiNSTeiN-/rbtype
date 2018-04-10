@@ -1,6 +1,6 @@
 module Rbtype
   module Constants
-    class DefinitionGroup
+    class Group
       include Enumerable
       attr_reader :full_path
 
@@ -13,8 +13,12 @@ module Rbtype
         full_path[-1]
       end
 
+      def to_s
+        "#<Group #{full_path} (#{size} definitions)>"
+      end
+
       def inspect
-        "#<DefinitionGroup #{full_path}>"
+        "#<#{self.class} full_path=#{full_path} definitions=#{@definitions}>"
       end
 
       def [](key)
@@ -39,6 +43,10 @@ module Rbtype
 
       def any?
         !empty?
+      end
+
+      def concat(definitions)
+        @definitions.concat(definitions)
       end
     end
   end

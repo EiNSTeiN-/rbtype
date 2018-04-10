@@ -1,24 +1,22 @@
 module Rbtype
   module Deps
     class RequiredFile
-      attr_reader :source, :requires, :definitions, :uses
+      attr_reader :source, :db
 
       def initialize(runtime_loader, source)
         @runtime_loader = runtime_loader
         @source = source
-        @requires = processor.requires
-        @definitions = processor.definitions
-        @uses = processor.uses
+        @db = processor.db
       end
 
       def inspect
-        "#<#{self.class} #{source.filename}>"
+        "#<#{self.class} #{@source.filename}>"
       end
 
       private
 
       def processor
-        @processor ||= Constants::Processor.new(@runtime_loader, source)
+        @processor ||= Constants::Processor.new(@runtime_loader, @source)
       end
     end
   end

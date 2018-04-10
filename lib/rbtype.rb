@@ -5,6 +5,8 @@ require 'rbtype/ast/sexp'
 require 'rbtype/constants/processor'
 require 'rbtype/constants/const_reference'
 require 'rbtype/constants/missing_constant'
+require 'rbtype/constants/db'
+require 'rbtype/constants/requirement'
 
 require 'rbtype/deps/file_loader'
 require 'rbtype/deps/gems'

@@ -33,7 +33,7 @@ module Rbtype
       private
 
       def find_group(path)
-        @runtime.find_const_group(path)
+        @runtime.db.definitions[path]
       end
 
       def find_on_nesting(nestings, name)

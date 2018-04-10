@@ -10,7 +10,7 @@ module Rbtype
             loc.sources.each do |source|
               next unless relevant_filename?(source.filename)
               const_ref = expected_constant(loc.path, source.filename)
-              puts "expect #{source.filename} to define #{const_ref}"
+              #puts "expect #{source.filename} to define #{const_ref}"
               required_file = @runtime.required[source.filename]
               group = find_const_case_insensitive(required_file, const_ref)
               next if group

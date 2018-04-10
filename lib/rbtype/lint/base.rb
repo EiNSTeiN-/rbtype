@@ -38,7 +38,7 @@ module Rbtype
       end
 
       def traverse(&block)
-        @runtime.definitions.each do |_, child|
+        @runtime.db.definitions.each do |_, child|
           block.call(child)
         end
       end

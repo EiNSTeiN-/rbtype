@@ -58,7 +58,7 @@ describe Rbtype::ProcessedSource do
 
   describe 'to_s' do
     subject { processed_source.to_s }
-    it { expect(subject).to eq 'Rbtype::ProcessedSource(test.rb)' }
+    it { expect(subject).to eq '#<Rbtype::ProcessedSource test.rb>' }
   end
 
   describe 'inspect' do

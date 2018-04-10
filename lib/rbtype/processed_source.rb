@@ -50,7 +50,7 @@ module Rbtype
     end
 
     def to_s
-      "#{self.class}(#{friendly_filename})"
+      "#<#{self.class} #{friendly_filename}>"
     end
 
     def inspect
