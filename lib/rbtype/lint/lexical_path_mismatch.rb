@@ -1,3 +1,4 @@
+# frozen_string_literal: true
 require_relative 'base'
 
 module Rbtype
@@ -16,8 +17,8 @@ module Rbtype
                 " defined at `%s` instead. This occurs when a compact name is used to "\
                 "define a constant and its name resolves to an unepxected location. "\
                 "Inspect the following location(s):\n%s\n",
-                definition.source_line,
-                definition.format_location,
+                definition.location.source_line,
+                definition.location.format,
                 actual_path,
                 lexical_path,
                 format_namespaced_definitions(definition.nesting)
@@ -33,7 +34,7 @@ module Rbtype
         format_list(
           nesting
             .select { |defn| defn.namespaced? }
-            .map { |defn| "#{defn.source_line} at #{defn.format_location}" }
+            .map { |defn| "#{defn.location.source_line} at #{defn.location.format}" }
         )
       end
     end

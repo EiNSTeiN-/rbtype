@@ -1,3 +1,4 @@
+# frozen_string_literal: true
 require_relative 'base'
 
 module Rbtype
@@ -8,18 +9,18 @@ module Rbtype
           next unless relevant_group?(group)
           group.each do |definition|
             next unless definition.namespaced?
-            next unless new_group = find_definition_group(definition.parent&.nesting, definition.path[0])
+            next unless new_group = find_definition_group(definition.parent_nesting, definition.path[0])
             expected_path = new_group.full_path.join(definition.path[1..-1])
             actual_path = group.full_path
 
             if actual_path != expected_path
-              nesting = [*definition.parent&.nesting&.map(&:full_path), Constants::ConstReference.base]
+              nesting = [*definition.parent_nesting&.map(&:full_path), Constants::ConstReference.base]
               add_error(definition, message: format(
                 "`%s` may be load order dependant. "\
                 "One of its definitions at %s resolves a constant `%s` on the following nestings: "\
                 "[%s] which initially caused this constant to be defined at `%s` but would now be defined at `%s`.\n",
                 group.full_path,
-                definition.format_location,
+                definition.location.format,
                 definition.path[0],
                 nesting.map(&:to_s).join(", "),
                 actual_path,

@@ -1,3 +1,4 @@
+# frozen_string_literal: true
 require_relative 'base'
 
 module Rbtype
@@ -24,12 +25,12 @@ module Rbtype
       def relevant_group?(group)
         @lint_all_files ||
           @constants.include?(group.full_path) ||
-          group.to_a.any? { |definition| !definition.for_namespacing? && @files.include?(definition.source.filename) }
+          group.to_a.any? { |definition| !definition.for_namespacing? && @files.include?(definition.location.filename) }
       end
 
       def format_definitions(definitions)
         definitions.map do |definition|
-          "#{definition.backtrace_line}#{' (for namespacing)' if definition.for_namespacing?}"
+          "#{definition.location.backtrace_line}#{' (for namespacing)' if definition.for_namespacing?}"
         end
       end
     end

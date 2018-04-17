@@ -1,3 +1,4 @@
+# frozen_string_literal: true
 require_relative 'use'
 require_relative 'definition'
 require_relative 'group'
@@ -76,11 +77,11 @@ module Rbtype
           if group
             return group
           else
-            @db.add_missing_constant(MissingConstant.new(maybe_const, node))
+            @db.add_missing_constant(MissingConstant.new(maybe_const, Location.from_node(node)))
           end
         end
         group = find_absolute_constant(node, Constants::ConstReference.base, name)
-        @db.add_missing_constant(MissingConstant.new(maybe_const, node)) unless group
+        @db.add_missing_constant(MissingConstant.new(maybe_const, Location.from_node(node))) unless group
         group
       end
 
@@ -88,7 +89,7 @@ module Rbtype
         wanted = current.join(path[0])
         group = find_group(wanted)
         unless group
-          @db.add_missing_constant(MissingConstant.new(wanted, node))
+          @db.add_missing_constant(MissingConstant.new(wanted, Location.from_node(node)))
           @runtime_loader.raise_with_backtrace!(Processor::NameError.new("uninitialized constant: #{wanted}"))
         end
         if path.size == 1
@@ -108,7 +109,7 @@ module Rbtype
           end
         end
         if group
-          @db.add_use(Use.new(group.full_path, group.to_a, group.map(&:source), node))
+          @db.add_use(Use.new(group.full_path, Location.from_node(node)))
         end
         group
       end
@@ -127,7 +128,14 @@ module Rbtype
           group = definition_group(node, ref[0..-2]) if ref.size > 1
           full_path = group&.full_path || parent&.full_path || Constants::ConstReference.base
         end
-        definition = Definition.new(parent, full_path.join(ref[-1]), ref, @source, node)
+        definition = Definition.new(
+          parent&.nesting,
+          full_path.join(ref[-1]),
+          ref,
+          node.type,
+          node.type == :module ? node.children[1] : node.children[2],
+          Location.from_node(node),
+        )
         @db.add_definition(definition)
 
         with_parent(definition) do
@@ -143,7 +151,8 @@ module Rbtype
         return unless [:require, :require_relative].include?(message) && parent.nil?
         req = Requirement.new(node)
         @db.add_require(req)
-        @runtime_loader.process_requirement(req)
+        resolved_filename = @runtime_loader.process_requirement(req)
+        req.resolved_filename = resolved_filename
       end
     end
   end

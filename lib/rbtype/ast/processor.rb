@@ -1,3 +1,4 @@
+# frozen_string_literal: true
 module Rbtype
   module AST
     class Processor < ::AST::Processor

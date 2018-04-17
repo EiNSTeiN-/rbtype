@@ -1,5 +1,4 @@
 # frozen_string_literal: true
-
 require 'rbtype'
 require 'optparse'
 require 'colorize'
@@ -14,6 +13,8 @@ module Rbtype
   class CLI
     class ExitWithFailure < RuntimeError; end
     class ExitWithSuccess < RuntimeError; end
+
+    GEM_CACHE_NAME = 'global-gem-cache'
 
     ACTIONS = {
       definitions: Rbtype::CLI::Definitions,
@@ -46,23 +47,28 @@ module Rbtype
         success!("no actions to perform...\n#{option_parser}")
       end
 
-      puts "Preparing cache..."
       prepare_cache
-      @source_set = Rbtype::SourceSet.new(cache: @cache)
+      @source_set = Rbtype::SourceSet.new
 
-      puts "Loading #{gems.specs.size} gems..."
-      locations = require_locations
-
-      puts "Building runtime..."
-      @runtime = Deps::RuntimeLoader.new(locations, [])
+      puts "Loading #{gems.specs.size} gems in the runtime..."
+      @runtime = Deps::RuntimeLoader.new(@source_set, require_locations, [])
       @runtime.provided('thread')
       puts "Loading typedefs..."
-      @runtime.load_sources(typedefs)
+      @runtime.load_files(typedefs)
       puts "Requiring gems..."
-      requires.each do |name|
+      ordered_requires.each do |name|
         line = "require '#{name}'"
         puts "`#{line.green}`"
-        @runtime.require_name(name)
+        begin
+          source = @runtime.find_source(name)
+          if source
+            @runtime.load_source(source)
+          else
+            puts "cannot load such file -- #{name}"
+          end
+        rescue Deps::RuntimeLoader::UnsupposedFileFormat => e
+          puts "#{e.class}: #{e.message.red}"
+        end
       end
       puts "Done!"
 
@@ -70,7 +76,7 @@ module Rbtype
 
       if files.size > 0
         puts "Loading #{files.size} files"
-        @runtime.load_sources(app_sources)
+        @runtime.load_files(files)
         puts "Done!"
       end
 
@@ -90,7 +96,11 @@ module Rbtype
       warn "#{e.class}: #{e.message}\n#{e.backtrace.join("\n")}".red
       false
     ensure
-      @source_set.save_cache if @source_set
+      Rbtype::Cache.save
+      if Rbtype::Cache.stats
+        stats = Rbtype::Cache.stats.map { |k,v| "#{k}=#{v} ms" }
+        puts "cache stats: #{stats.join(', ')}"
+      end
     end
 
     private
@@ -98,40 +108,23 @@ module Rbtype
     def prepare_cache
       path = Pathname.new(Dir.pwd).join('tmp/type-cache')
       Dir.mkdir(path) unless File.exist?(path)
-      @cache = Rbtype::Cache.new(path)
+      Rbtype::Cache.setup(path)
     end
 
-    def build_file_loader(files)
-      Deps::FileLoader.new(
-        files,
-        source_set: @source_set,
-      )
-    end
-
-    def requires
-      gems.ordered_requires.values.flatten
+    def ordered_requires
+      @ordered_requires ||= gems.ordered_requires.values.flatten
     end
 
     def typedefs
       basepath = File.expand_path(File.dirname(__FILE__))
-      files = [File.join(basepath, 'ruby-typedef.rb')]
-      loader = build_file_loader(files)
-      loader.sources
-    end
-
-    def app_sources
-      @app_sources ||= begin
-        loader = build_file_loader(files)
-        loader.sources
-      end
+      [File.join(basepath, 'ruby-typedef.rb')]
     end
 
     def rails_autoload_locations
-      @rails_autoload_sources ||= begin
+      @rails_autoload_locations ||= begin
         @rails_autoload_paths.map do |path|
-          files = Dir["#{path}/**/*.rb"]
-          loader = build_file_loader(files)
-          Deps::RailsAutoloadLocation.new(path, loader.sources)
+          files = Dir["#{path}/**/*"].select { |filename| File.file?(filename) }
+          Deps::RailsAutoloadLocation.new(path, files)
         end
       end
     end
@@ -139,50 +132,28 @@ module Rbtype
     def environment_require_locations
       paths = %x(ruby -e 'puts $:').split("\n")
       missing = paths
-        .reject { |path| spec_load_paths.include?(path) }
+        .reject { |path| spec_require_paths.include?(path) }
         .select { |path| Dir.exist?(path) }
       missing.map do |path|
-        files = Dir["#{path}/**/*.rb"]
-        loader = build_file_loader(files)
-        Deps::RequireLocation.new(path, loader.sources)
+        files = Dir["#{path}/**/*"].select { |filename| File.file?(filename) }
+        Deps::RequireLocation.new(path, files)
       end
     end
 
     def explicit_require_locations
       @require_paths.map do |path|
         expanded = File.expand_path(path)
-        files = Dir["#{expanded}/**/*.rb"]
-        loader = build_file_loader(files)
-        Deps::RequireLocation.new(path, loader.sources)
+        files = Dir["#{expanded}/**/*"].select { |filename| File.file?(filename) }
+        Deps::RequireLocation.new(path, files)
       end
-    end
-
-    def spec_loaders
-      @spec_loaders ||= gems.specs.map do |spec|
-        Deps::SpecLoader.new(spec, ignore_errors: true, source_set: @source_set)
-      end
-    end
-
-    def spec_load_paths
-      @spec_load_paths ||= spec_loaders.map do |spec_loader|
-        spec_loader.full_require_paths || []
-      end.flatten
     end
 
     def spec_require_locations
-      @spec_require_locations ||= begin
-        spec_loaders.map do |spec_loader|
-          begin
-            locations = spec_loader.full_require_paths.map do |path|
-              sources = spec_loader.sources.select { |source| source.filename.start_with?(path) }
-              Deps::RequireLocation.new(path, sources)
-            end
-          rescue => e
-            warn "Error while dependency #{spec_loader.short_name}: #{e}".red
-            raise
-          end
-        end.flatten
-      end
+      @spec_require_locations ||= gems.specs.map(&:require_locations).flatten
+    end
+
+    def spec_require_paths
+      @spec_load_paths ||= spec_require_locations.map(&:path)
     end
 
     def require_locations
@@ -190,7 +161,7 @@ module Rbtype
         *environment_require_locations,
         *spec_require_locations,
         *explicit_require_locations,
-      ].reject { |loc| loc.sources.size == 0 }
+      ].reject { |loc| loc.files.size == 0 }
     end
 
     def gemfile
@@ -226,9 +197,9 @@ module Rbtype
 
     def files
       @files
-        .map { |f| f.include?('*') ? Dir[f] : f }
-        .flatten
+        .map { |f| Dir[f] }.flatten
         .map { |f| File.expand_path(f, Dir.pwd) }
+        .select { |f| f.end_with?('.rb') && File.file?(f) }
     end
 
     def constants

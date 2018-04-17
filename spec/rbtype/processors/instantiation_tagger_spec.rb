@@ -3,12 +3,7 @@ require 'rbtype'
 
 describe Rbtype::Processors::InstantiationTagger do
   let(:filename) { 'test.rb' }
-  let(:buffer) do
-    buffer = Parser::Source::Buffer.new(filename)
-    buffer.source = source
-    buffer
-  end
-  let(:processed_source) { Rbtype::ProcessedSource.new(buffer, Parser::Ruby24) }
+  let(:processed_source) { Rbtype::ProcessedSource.new(filename, source, Parser::Ruby24) }
   let(:ast) { processed_source.ast }
   let(:handlers) { [Rbtype::Processors::ConstReferenceTagger.new, described_class.new] }
   let(:processor) { Rbtype::AST::Processor.new(handlers) }

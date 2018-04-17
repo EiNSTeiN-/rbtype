@@ -1,9 +1,11 @@
+# frozen_string_literal: true
 module Rbtype
   module Constants
     class DB
-      attr_reader :requires, :definitions, :uses, :missings
+      attr_reader :required_files, :requires, :definitions, :uses, :missings
       attr_reader :automatic_modules, :autoloaded_constants
       def initialize
+        @required_files = []
         @requires = []
         @definitions = {}
         @uses = {}

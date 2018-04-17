@@ -1,3 +1,4 @@
+# frozen_string_literal: true
 require_relative 'error'
 
 module Rbtype
@@ -8,7 +9,7 @@ module Rbtype
       def initialize(runtime, options)
         @runtime = runtime
         @constants = options[:constants]
-        @files = options[:files]
+        @files = Set.new(options[:files])
         @lint_all_files = options[:lint_all_files]
         @errors = []
       end
@@ -18,7 +19,7 @@ module Rbtype
       def relevant_group?(group)
         @lint_all_files ||
           @constants.include?(group.full_path) ||
-          group.to_a.any? { |definition| !definition.for_namespacing? && @files.include?(definition.source.filename) }
+          group.to_a.any? { |definition| !definition.for_namespacing? && @files.include?(definition.location.filename) }
       end
 
       def relevant_filename?(filename)

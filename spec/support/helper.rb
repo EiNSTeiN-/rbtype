@@ -9,11 +9,8 @@ module Support
   module Helper
     extend RSpec::SharedContext
 
-    def build_processed_source(source, filename: 'test.rb', buffer: nil, parser: ::Parser::Ruby24)
-      buffer ||= ::Parser::Source::Buffer.new(filename).tap do |buffer|
-        buffer.source = source
-      end
-      Rbtype::ProcessedSource.new(buffer, parser)
+    def build_processed_source(source, filename: 'test.rb', parser: ::Parser::Ruby24)
+      Rbtype::ProcessedSource.new(filename, source, parser)
     end
 
     def const_ref(*parts)

@@ -1,6 +1,8 @@
+# frozen_string_literal: true
 require 'bundler'
 require 'bundler/dsl'
 require 'rubygems'
+require_relative 'spec'
 
 module Rbtype
   module Deps
@@ -14,7 +16,7 @@ module Rbtype
       end
 
       def specs
-        @specs ||= default_specs
+        @specs ||= default_specs.map{ |spec| Spec.new(spec) }
       end
 
       def requires

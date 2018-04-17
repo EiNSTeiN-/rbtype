@@ -1,30 +1,56 @@
-require_relative 'required_file'
-
+# frozen_string_literal: true
 module Rbtype
   module Deps
     class RuntimeLoader
-      attr_reader :required, :require_failed, :db
+      attr_reader :require_failed, :db
       attr_accessor :rails_autoload_locations
 
-      def initialize(require_locations, rails_autoload_locations)
+      class UnsupposedFileFormat < RuntimeError; end
+
+      def initialize(source_set, require_locations, rails_autoload_locations)
+        @source_set = source_set
         @require_locations = require_locations
         @rails_autoload_locations = rails_autoload_locations
         @provided = []
-        @required = {}
         @require_loop_detection = []
         @require_failed = {}
+        @db_for_files = {}
         @backtrace = []
         @db = Constants::DB.new
+      end
+
+      def db_for_file(filename)
+        @db_for_files[filename]
       end
 
       def provided(name)
         @provided << name
       end
 
+      def build_source(filename)
+        if File.extname(filename) == ".rb"
+          @source_set.build_source(filename)
+        else
+          raise UnsupposedFileFormat, "Cannot parse #{File.extname(filename).inspect} file at #{filename}"
+        end
+      end
+
+      def load_files(files)
+        files.each do |filename|
+          next if required_file?(filename)
+          begin
+            source = build_source(filename)
+            load_source(source) if source
+          rescue => e
+            puts "#{e.class}: #{e.message}"
+          end
+        end
+      end
+
       def find_source(name)
         @require_locations.each do |loc|
-          found = loc.find(name)
-          return found if found
+          filename = loc.find(name)
+          return build_source(filename) if filename
         end
         nil
       end
@@ -33,16 +59,16 @@ module Rbtype
         @require_locations.each do |loc|
           expanded = File.expand_path("#{base}/#{name}")
           next unless expanded.start_with?(loc.path)
-          found = loc.find_absolute(expanded)
-          return found if found
+          filename = loc.find_absolute(expanded)
+          return build_source(filename) if filename
         end
         nil
       end
 
       def find_autoloaded_source(const_ref)
         @rails_autoload_locations.each do |location|
-          source = location.find_autoloaded_file(const_ref)
-          return source if source
+          filename = location.find_autoloaded_file(const_ref)
+          return build_source(filename) if filename
         end
         nil
       end
@@ -79,23 +105,23 @@ module Rbtype
         end
       end
 
-      def required_source?(source)
-        @required.key?(source.filename)
+      def required_file?(filename)
+        @db.required_files.include?(filename)
       end
 
       def process_requirement(req)
         unless req.filename
-          puts "#{@backtrace.last}: cannot process #{req}"
+          puts "#{@backtrace.last}: cannot process #{req.to_s.red}"
           return
         end
 
-        required_file = if req.method == :require
+        if req.method == :require
           load_from_require_locations(req)
         else
           load_from_relative_directory(req)
         end
-
-        required_file
+      rescue UnsupposedFileFormat => e
+        puts "#{@backtrace.last}: #{e.to_s.red}"
       end
 
       def load_from_require_locations(req)
@@ -112,7 +138,7 @@ module Rbtype
       def load_from_relative_directory(req)
         source = find_source_absolute(req.relative_directory, req.filename)
         unless source
-          puts "#{@backtrace.last}: cannot load such file -- #{base}/#{name}"
+          puts "#{@backtrace.last}: cannot load such file -- #{req.filename} relative to #{req.relative_directory}"
           return
         end
         load_source(source)
@@ -125,13 +151,15 @@ module Rbtype
       end
 
       def load_source(source)
-        return @required[source.filename] if required_source?(source)
-        return if @require_loop_detection.include?(source)
+        return source.filename if required_file?(source.filename)
+        return source.filename if @require_loop_detection.include?(source)
 
         require_loop_detection(source) do
-          required_file = RequiredFile.new(self, source)
-          @db.merge(required_file.db)
-          @required[source.filename] = required_file
+          processor = Constants::Processor.new(self, source)
+          @db.merge(processor.db)
+          @db.required_files << source.filename
+          @db_for_files[source.filename] = processor.db
+          source.filename
         end
       end
 

@@ -1,11 +1,15 @@
+# frozen_string_literal: true
 module Rbtype
   module Constants
     class ConstReference
-      attr_reader :parts
+      attr_reader :parts, :hash
 
       def initialize(parts = nil)
         @parts = parts&.dup || []
+        @parts.freeze
         @explicit_base = @parts.size > 0 && @parts[0] == nil
+        @hash = @parts.hash
+        freeze
       end
 
       def type
@@ -67,10 +71,6 @@ module Rbtype
       end
       alias_method :eql?, :==
 
-      def hash
-        @hash ||= parts.hash
-      end
-
       def join(other)
         other_const = wrap_array(other)
 
@@ -79,19 +79,6 @@ module Rbtype
         else
           self.class.new([*parts, *other_const.parts])
         end
-      end
-
-      def join!(other)
-        other_const = wrap_array(other)
-
-        if other_const.explicit_base?
-          @parts = other_const.parts.dup
-          @explicit_base = true
-        else
-          @parts.push(*other_const.parts)
-        end
-
-        self
       end
 
       def [](index)

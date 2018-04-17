@@ -1,3 +1,4 @@
+# frozen_string_literal: true
 require_relative 'base'
 
 module Rbtype
@@ -6,8 +7,8 @@ module Rbtype
       def run
         traverse do |group|
           group.each do |definition|
-            next unless @lint_all_files || @files.include?(definition.source.filename)
-            next unless definition.parent
+            next unless @lint_all_files || @files.include?(definition.location.filename)
+            next unless definition.parent_nesting
             next unless definition.path.explicit_base?
 
             add_error(definition, message: format(
@@ -15,8 +16,8 @@ module Rbtype
               "was defined with an explicit base (::). The class or module is "\
               "defined at the top level of the object hierarchy despite being located inside "\
               "another class or module.\n",
-              definition.source_line,
-              definition.format_location
+              definition.location.source_line,
+              definition.location.format
             ))
           end
         end

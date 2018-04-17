@@ -1,3 +1,4 @@
+# frozen_string_literal: true
 module Rbtype
   class CLI
     class Lint
@@ -16,7 +17,10 @@ module Rbtype
       end
 
       def to_s
-        @classes.each(&:run)
+        @classes.each do |runner|
+          puts "running #{runner.class}"
+          runner.run
+        end
         @classes.map(&:errors).flatten.map(&:message).join("\n")
       end
     end

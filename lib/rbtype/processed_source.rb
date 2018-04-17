@@ -1,6 +1,11 @@
+# frozen_string_literal: true
+require_relative 'cacheable'
+
 module Rbtype
   class ProcessedSource
-    attr_reader :buffer
+    include Cacheable
+
+    attr_reader :filename, :raw_content
 
     class Builder < ::Parser::Builders::Default
       def n(type, children, source_map)
@@ -8,23 +13,21 @@ module Rbtype
       end
     end
 
-    def initialize(buffer, parser_klass, relative_path: nil)
+    def initialize(filename, raw_content, parser_klass, relative_path: nil)
       @relative_path = relative_path
-      @buffer = buffer
+      @filename = filename
+      @raw_content = raw_content
       @parser_klass = parser_klass
       @ast = nil
+      cache_register!
+    end
+
+    def self.initialize_from_cache(filename)
+      Cache.load_object_by_key(cache_key(filename: filename))
     end
 
     def ast
       @ast ||= parse
-    end
-
-    def ast_loaded?
-      !@ast.nil?
-    end
-
-    def filename
-      @buffer.name
     end
 
     def ==(other)
@@ -45,10 +48,6 @@ module Rbtype
       end
     end
 
-    def raw_content
-      @buffer.source
-    end
-
     def to_s
       "#<#{self.class} #{friendly_filename}>"
     end
@@ -60,7 +59,8 @@ module Rbtype
     def marshal_dump
       {
         relative_path: @relative_path,
-        buffer: @buffer,
+        filename: @filename,
+        raw_content: @raw_content,
         parser_klass: @parser_klass,
         ast: @ast,
       }
@@ -68,9 +68,39 @@ module Rbtype
 
     def marshal_load(args)
       @relative_path = args[:relative_path]
-      @buffer = args[:buffer]
+      @filename = args[:filename]
+      @raw_content = args[:raw_content]
       @parser_klass = args[:parser_klass]
       @ast = args[:ast]
+      cache_register!
+    end
+
+    def cacheable?
+      File.exist?(filename) && @ast != nil
+    end
+
+    def cache_metadata
+      metadata = { filename: filename }
+      metadata[:mtime] = File.mtime(filename) if File.exist?(filename)
+      metadata
+    end
+
+    def self.cache_key(filename:, **)
+      "#{self}:#{filename}"
+    end
+
+    def self.cache_stale?(filename:, mtime:, **)
+      return true unless File.exist?(filename)
+      current_mtime = File.mtime(filename)
+      current_mtime > mtime
+    end
+
+    def buffer
+      @buffer ||= begin
+        buffer = ::Parser::Source::Buffer.new(filename)
+        buffer.source = raw_content
+        buffer
+      end
     end
 
     private
@@ -86,7 +116,7 @@ module Rbtype
     end
 
     def parse
-      parser.parse(@buffer) unless raw_content.empty?
+      parser.parse(buffer) unless raw_content.empty?
     end
   end
 end

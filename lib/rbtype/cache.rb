@@ -1,110 +1,141 @@
+# frozen_string_literal: true
 require 'digest'
 
 module Rbtype
-  class Cache
-    def initialize(path)
-      @path = path
+  module Cache
+    extend self
+
+    def setup(cache_directory)
+      @cache_directory = cache_directory
+      @objects = {}
+      @metadata_by_key = load_metadata || {}
+      puts "metadata in cache: #{@metadata_by_key.size}"
     end
 
-    def for_file(source_filename, key_prefix:)
-      cache_filename = build_filename("#{key_prefix}:#{source_filename}")
-      comparators = [FileComparator.new(source_filename, cache_filename)]
-      CacheFile.new(cache_filename, comparators: comparators)
-    end
-
-    def build(key, comparators: nil)
-      cache_filename = build_filename(key)
-      CacheFile.new(cache_filename, comparators: comparators)
-    end
-
-    def build_filename(key)
-      hash = Digest::SHA1.hexdigest(key)
-      @path.join(hash)
-    end
-
-    class FileComparator
-      attr_reader :source_filename, :compare_filename
-
-      def initialize(source_filename, compare_filename)
-        @source_filename = source_filename
-        @compare_filename = compare_filename
+    class MetadataEntry
+      attr_reader :klass, :metadata
+      def initialize(klass, metadata)
+        @klass = klass
+        @metadata = metadata
       end
 
-      def source_changed?
-        if can_compare?
-          source_mtime > compare_mtime
-        else
-          true
-        end
-      end
-
-      private
-
-      def source_mtime
-        File.mtime(source_filename)
-      end
-
-      def compare_mtime
-        File.mtime(compare_filename)
-      end
-
-      def can_compare?
-        File.exists?(source_filename) &&
-          File.exists?(compare_filename)
+      def changed?(metadata)
+        @metadata != metadata
       end
     end
 
-    class CacheFile
-      attr_reader :filename, :comparators
+    def register(object)
+      @objects ||= {}
+      key = object.class.cache_key(**object.cache_metadata)
+      @objects[key] = object
+    end
 
-      def initialize(filename, comparators: nil)
-        @filename = filename
-        @comparators = comparators || []
-      end
-
-      def build(&block)
-        if exist?
-          unless expired?
-            object = load_object
-          end
-        end
-
-        unless object
-          object = yield
-          update(object)
-        end
-
+    def load_object_by_key(key)
+      return unless @metadata_by_key
+      return unless (entry = @metadata_by_key[key])
+      if entry.klass.cache_stale?(**entry.metadata)
+        delete_by_key(key)
+        nil
+      else
+        filename = cache_filename(key)
+        object = load_object(entry.klass, filename)
+        delete_by_key(key) unless object
         object
       end
+    end
 
-      def load_object
-        Marshal.load(data) if data != ""
-      rescue ArgumentError
-        nil
+    def load_metadata
+      return unless File.exist?(metadata_filename)
+      return unless (data = File.read(metadata_filename))
+      return if data == nil || data == ""
+      measure(:load_metadata) do
+        Marshal.load(data)
       end
+    end
 
-      def update(object)
-        File.open(filename, 'wb') do |f|
-          data = Marshal.dump(object)
-          f.write(data)
+    def save_metadata
+      return unless @metadata_by_key
+      measure(:save_metadata) do
+        dump = Marshal.dump(@metadata_by_key)
+        File.open(metadata_filename, 'wb') do |f|
+          f.write(dump)
         end
       end
+    end
 
-      def exist?
-        File.exist?(filename)
+    def metadata_filename
+      @cache_directory&.join('metadata')
+    end
+
+    def save
+      save_objects
+      save_metadata
+    end
+
+    def save_objects
+      @objects&.each do |_, object|
+        save_object(object)
       end
+      true
+    end
 
-      def expired?
-        comparators.any? do |cmp|
-          cmp.source_changed?
+    def save_object(object)
+      metadata = object.cache_metadata
+      key = object.class.cache_key(**metadata)
+      entry = @metadata_by_key[key]
+      if object.cacheable?
+        if entry == nil || entry.changed?(metadata)
+          measure(:save_object) do
+            filename = cache_filename(key)
+            File.open(filename, 'wb') do |f|
+              f.write(object.cache_dump)
+            end
+            @metadata_by_key[key] = MetadataEntry.new(object.class, metadata)
+          end
         end
+        true
+      else
+        delete_by_key(key)
+        false
       end
+    end
 
-      private
+    def delete_object(object)
+      key = object.class.cache_key(**object.cache_metadata)
+      delete_by_key(key)
+    end
 
-      def data
-        File.read(filename)
+    def delete_by_key(key)
+      filename = cache_filename(key)
+      File.delete(filename) if File.exist?(filename)
+      @metadata_by_key[key] = nil
+    end
+
+    def load_object(klass, filename)
+      return unless File.exist?(filename)
+      return unless (data = File.read(filename))
+      return if data == ""
+      measure(:load_object) do
+        klass.cache_load(data)
       end
+    end
+
+    def cache_filename(key)
+      hash = Digest::SHA1.hexdigest(key)
+      @cache_directory.join(hash)
+    end
+
+    def measure(action)
+      @stats ||= {}
+      @stats[action] ||= 0
+      start = Time.now.to_f
+      yield
+    ensure
+      @stats[action] += Time.now.to_f - start
+    end
+
+    def stats
+      @stats
     end
   end
 end

@@ -4,12 +4,7 @@ require 'rbtype'
 describe Rbtype::Constants::ConstReference do
   describe 'from_node' do
     let(:filename) { 'test.rb' }
-    let(:buffer) do
-      buffer = ::Parser::Source::Buffer.new(filename)
-      buffer.source = source
-      buffer
-    end
-    let(:processed_source) { Rbtype::ProcessedSource.new(buffer, ::Parser::Ruby24) }
+    let(:processed_source) { Rbtype::ProcessedSource.new(filename, source, ::Parser::Ruby24) }
     let(:ast) { processed_source.ast }
     let(:ref) { described_class.from_node(ast) }
     subject { ref }
@@ -45,46 +40,6 @@ describe Rbtype::Constants::ConstReference do
 
   describe 'join' do
     subject { base.join(other) }
-
-    context 'simple case' do
-      let(:base) { described_class.new([:Foo]) }
-      let(:other) { described_class.new([:Bar]) }
-
-      it { expect(subject.to_s).to eq 'Foo::Bar' }
-      it { expect(subject.parts).to eq [:Foo, :Bar] }
-    end
-
-    context 'when base is explicitly on cbase' do
-      let(:base) { described_class.new([nil, :Foo]) }
-      let(:other) { described_class.new([:Bar]) }
-
-      it { expect(base.explicit_base?).to eq true }
-      it { expect(subject.to_s).to eq '::Foo::Bar' }
-      it { expect(subject.parts).to eq [nil, :Foo, :Bar] }
-      it { expect(subject.explicit_base?).to eq true }
-    end
-
-    context 'when other is explicitly on cbase' do
-      let(:base) { described_class.new([:Foo]) }
-      let(:other) { described_class.new([nil, :Bar]) }
-
-      it { expect(other.explicit_base?).to eq true }
-      it { expect(subject.to_s).to eq '::Bar' }
-      it { expect(subject.parts).to eq [nil, :Bar] }
-      it { expect(subject.explicit_base?).to eq true }
-    end
-
-    context 'works when other is a simple array' do
-      let(:base) { described_class.new([:Foo]) }
-      let(:other) { [:Bar, :Baz] }
-
-      it { expect(subject.to_s).to eq 'Foo::Bar::Baz' }
-      it { expect(subject.parts).to eq [:Foo, :Bar, :Baz] }
-    end
-  end
-
-  describe 'join!' do
-    subject { base.join!(other) }
 
     context 'simple case' do
       let(:base) { described_class.new([:Foo]) }

@@ -1,15 +1,24 @@
+# frozen_string_literal: true
 module Rbtype
   module Constants
     class Definition
-      attr_reader :parent, :full_path, :path, :source, :ast
+      attr_reader :parent_nesting, :nesting, :full_path, :path, :type, :body_node, :location
 
-      def initialize(parent, full_path, path, source, ast)
-        @parent = parent
+      def initialize(parent_nesting, full_path, path, type, body_node, location)
+        @parent_nesting = parent_nesting.freeze
+        @nesting = [self, *parent_nesting].freeze
         @full_path = full_path
         @path = path
-        @source = source
-        @nesting = nesting
-        @ast = ast
+        @type = type
+        @body_node = body_node
+        @location = location
+        @for_namespacing = if !@body_node
+          true
+        else
+          body = @body_node.type == :begin ? @body_node.to_a : [@body_node]
+          body.all? { |node| node.type == :class || node.type == :module }
+        end
+        freeze
       end
 
       def name
@@ -17,46 +26,15 @@ module Rbtype
       end
 
       def for_namespacing?
-        body = body_node
-        return true unless body
-        body = body.type == :begin ? body.to_a : [body]
-        body.all? { |node| node.type == :class || node.type == :module }
-      end
-
-      def body_node
-        if ast.type == :class
-          ast.children[2]
-        elsif ast.type == :module
-          ast.children[1]
-        end
+        @for_namespacing
       end
 
       def namespaced?
         path.size > 1
       end
 
-      def nesting
-        @nesting ||= [self, *parent&.nesting]
-      end
-
-      def format_location
-        "#{location.source_buffer.name}:#{location.line}"
-      end
-
-      def source_line
-        location.source_line.strip
-      end
-
-      def backtrace_line
-        "#{format_location} `#{source_line}`"
-      end
-
-      def location
-        ast.location.expression
-      end
-
       def inspect
-        "#<Definition #{@ast.type} #{path}>"
+        "#<Definition #{type} #{path}>"
       end
     end
   end

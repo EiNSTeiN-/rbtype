@@ -1,3 +1,4 @@
+# frozen_string_literal: true
 require_relative '../base'
 require 'active_support/inflector/methods'
 
@@ -7,32 +8,41 @@ module Rbtype
       class AutoloadConstants < Base
         def run
           @runtime.rails_autoload_locations.each do |loc|
-            loc.sources.each do |source|
-              next unless relevant_filename?(source.filename)
-              const_ref = expected_constant(loc.path, source.filename)
-              #puts "expect #{source.filename} to define #{const_ref}"
-              required_file = @runtime.required[source.filename]
-              group = find_const_case_insensitive(required_file, const_ref)
-              next if group
+            loc.files.each do |filename|
+              next unless relevant_filename?(filename)
+              const_name = expected_constant_name(loc.path, filename)
+              return unless db = @runtime.db_for_file(filename)
+              group = find_const_case_insensitive(db.definitions, const_name)
 
-              found = if group
-                format(
-                  "If the application works despite this issue, the constant may be provided by "\
-                  "another file loaded in the namespace prior to this one. The constant `%s` was "\
-                  "found in your application in the following files:\n%s",
-                  group.map(&:backtrace_line).join("\n")
-                )
-              else
-                "The constant could not be found in any file."
+              if group == nil
+                add_error(const_name, message: format(
+                  "`%s` is expected to be defined by the file %s "\
+                  "because this file is present in a Rails autoload path "\
+                  "but the constant was not found in any file.\n",
+                  const_name,
+                  filename
+                ))
+              elsif group.size > 1
+                add_error(const_name, message: format(
+                  "`%s` is expected to be defined by the file %s "\
+                  "because this file is present in a Rails autoload path "\
+                  "but we found more than a single definition of this constant, "\
+                  "which may cause autoload problems. This likely means that this constant "\
+                  "conflicts with a constant defined in a gem. Defnitions were:\n",
+                  const_name,
+                  filename,
+                  group.map(&:location).map(&:backtrace_line).join("\n")
+                ))
+              elsif !group.all? { |definition| definition.location.filename == filename }
+                add_error(const_name, message: format(
+                  "`%s` is expected to be defined by the file %s "\
+                  "because this file is present in a Rails autoload path "\
+                  "but we found definitions of this constant in other files. Defnitions were:\n%s\n",
+                  const_name,
+                  filename,
+                  group.map(&:location).map(&:backtrace_line).join("\n")
+                ))
               end
-
-              add_error(const_ref, message: format(
-                "`%s` is expected to be defined by the file %s "\
-                "because this file is present in a Rails autoload path "\
-                "but the constant was not found in this file. #{found}\n",
-                const_ref,
-                source.filename
-              ))
             end
           end
         end
@@ -43,17 +53,15 @@ module Rbtype
           ActiveSupport::Inflector.camelize(name)
         end
 
-        def expected_constant(basepath, filename)
+        def expected_constant_name(basepath, filename)
           name = filename.sub(basepath, '').sub(/\.rb$/, '')
           klass_name = camelize(name)
-          Constants::ConstReference.base.join(
-            Constants::ConstReference.from_string(klass_name)
-          )
+          klass_name
         end
 
-        def find_const_case_insensitive(required_file, const_ref)
-          wanted = const_ref.to_s.downcase
-          required_file.definitions.each do |key, value|
+        def find_const_case_insensitive(definitions, const_name)
+          wanted = const_name.downcase
+          definitions.each do |key, value|
             return value if key.to_s.downcase == wanted
           end
           nil

@@ -1,27 +1,24 @@
+# frozen_string_literal: true
 module Rbtype
   module Constants
     class MissingConstant
-      attr_reader :full_path, :node
+      attr_reader :full_path, :location
 
-      def initialize(full_path, node)
+      def initialize(full_path, location)
         @full_path = full_path
-        @node = node
+        @location = location
       end
 
       def name
         full_path[-1]
       end
 
-      def source_filename
-        node.location.expression.source_buffer.name
-      end
-
       def to_s
-        "#<MissingConstant #{full_path}>"
+        "#<#{self.class} #{full_path}>"
       end
 
       def inspect
-        "#<MissingConstant full_path=#{full_path} source_filename=#{source_filename}>"
+        "#<#{self.class} full_path=#{full_path} location=#{location}>"
       end
     end
   end

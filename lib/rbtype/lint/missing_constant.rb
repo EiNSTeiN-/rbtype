@@ -1,3 +1,4 @@
+# frozen_string_literal: true
 require_relative 'base'
 
 module Rbtype
@@ -14,8 +15,8 @@ module Rbtype
               "This can be resolved by adding a `require` statement in the first file or "\
               "avoid the use of compact name to define classes.\n",
               missing_constant.full_path,
-              missing_constant.source_filename,
-              group.first.format_location
+              missing_constant.location.filename,
+              group.first.location.format
             ))
           end
         end

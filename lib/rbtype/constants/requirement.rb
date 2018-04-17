@@ -1,22 +1,28 @@
+# frozen_string_literal: true
 module Rbtype
   module Constants
     class Requirement
-      attr_reader :node
+      attr_accessor :resolved_filename
 
       def initialize(node)
         @node = node
+        @resolved_filename = nil
+      end
+
+      def location
+        @location ||= Location.from_node(@node)
       end
 
       def relative_directory
-        @relative_directory ||= File.dirname(node.location.expression.source_buffer.name)
+        @relative_directory ||= File.dirname(@node.location.expression.source_buffer.name)
       end
 
       def method
-        node.children[1]
+        @node.children[1]
       end
 
       def argument_node
-        node.children[2]
+        @node.children[2]
       end
 
       def string?
@@ -28,16 +34,12 @@ module Rbtype
         @filename ||= argument_node.children[0] if string?
       end
 
-      def source_filename
-        node.location.expression.source_buffer.name
-      end
-
-      def source_line
-        node.location.expression.source_line
-      end
-
       def to_s
-        "#<Require #{source_line}>"
+        "#<Require #{location.source_line}>"
+      end
+
+      def inspect
+        "#<#{self.class} location=#{location.inspect} resolved_filename=#{resolved_filename.inspect}>"
       end
     end
   end

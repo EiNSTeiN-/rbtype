@@ -6,8 +6,9 @@ describe Rbtype::Lint::MissingConstant do
   let(:rails_autoload_locations) { [] }
   let(:processed_source) { build_processed_source(source) }
   let(:sources) { [processed_source] }
+  let(:source_set) { Rbtype::SourceSet.new }
   let(:runtime) do
-    runtime = Rbtype::Deps::RuntimeLoader.new(require_locations, rails_autoload_locations)
+    runtime = Rbtype::Deps::RuntimeLoader.new(source_set, require_locations, rails_autoload_locations)
     runtime.load_sources(sources)
     runtime
   end

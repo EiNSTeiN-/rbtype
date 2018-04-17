@@ -1,60 +1,28 @@
+# frozen_string_literal: true
+require 'parser/ruby24'
+
 module Rbtype
   class SourceSet
-    def initialize(cache:)
-      @cache = cache
-      @cache_file = @cache.build("#{self.class}.cache_file")
-      #@map = @cache_file.load_object if @cache_file.exist?
-      @map ||= {}
+    def initialize
+      @map = {}
     end
 
-    def load_source(filename)
-      cached_source = @map[filename]
-      if !cached_source || cached_source.expired?
-        cached_source = build_cached_source(filename)
-        @map[filename] = cached_source
-      end
-      cached_source.processed_source
+    def <<(source)
+      @map[source.filename] = source
     end
 
-    def save_cache
-      @map.each do |_, cached_source|
-        cached_source.update
-      end
-      #@cache_file.update(@map)
-    end
-
-    class CachedSource
-      attr_reader :processed_source
-
-      def initialize(cache_file, processed_source)
-        @cache_file = cache_file
-        @processed_source = processed_source
-        @ast_loaded = processed_source.ast_loaded?
-      end
-
-      def update
-        if processed_source && processed_source.ast_loaded? && !@ast_loaded
-          @cache_file.update(processed_source)
-        end
-      end
-
-      def expired?
-        @cache_file.expired?
-      end
+    def build_source(filename)
+      @map[filename] ||= build_cached_source(filename)
     end
 
     private
 
     def build_cached_source(filename)
-      cache_file = @cache.for_file(filename, key_prefix: "processed-source")
-      source = cache_file.build do
-        buffer = build_buffer(filename)
-        Rbtype::ProcessedSource.new(buffer, ::Parser::Ruby24)
+      processed_source = Rbtype::ProcessedSource.initialize_from_cache(filename)
+      processed_source ||= begin
+        data = read_file(filename)
+        Rbtype::ProcessedSource.new(filename, data, ::Parser::Ruby24)
       end
-      CachedSource.new(cache_file, source)
-    rescue Parser::SyntaxError
-      puts "Parser error while loading #{filename}"
-      raise unless @ignore_errors
     end
 
     def read_file(filename)
@@ -63,12 +31,6 @@ module Rbtype
         content.force_encoding(Encoding::UTF_8)
       end
       content
-    end
-
-    def build_buffer(filename)
-      buffer = ::Parser::Source::Buffer.new(filename)
-      buffer.source = read_file(filename)
-      buffer
     end
   end
 end

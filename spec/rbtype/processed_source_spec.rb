@@ -5,12 +5,7 @@ describe Rbtype::ProcessedSource do
   let(:source) { 'foo' }
   let(:filename) { 'test.rb' }
   let(:relative_to) { nil }
-  let(:buffer) do
-    ::Parser::Source::Buffer.new(filename).tap do |buffer|
-      buffer.source = source
-    end
-  end
-  let(:processed_source) { described_class.new(buffer, ::Parser::Ruby24, relative_path: relative_to) }
+  let(:processed_source) { described_class.new(filename, source, ::Parser::Ruby24, relative_path: relative_to) }
 
   describe 'filename' do
     subject { processed_source }
