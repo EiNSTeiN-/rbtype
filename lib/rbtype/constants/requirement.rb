@@ -35,7 +35,7 @@ module Rbtype
       end
 
       def to_s
-        "#<Require #{location.source_line}>"
+        "#<#{self.class} #{location.source_line}>"
       end
 
       def inspect
