@@ -1,4 +1,6 @@
 # frozen_string_literal: true
+require 'active_support/inflector/methods'
+
 module Rbtype
   module Deps
     class RuntimeLoader
@@ -66,8 +68,9 @@ module Rbtype
       end
 
       def find_autoloaded_source(const_ref)
+        filename = ActiveSupport::Inflector.underscore(const_ref.without_explicit_base.to_s)
         @rails_autoload_locations.each do |location|
-          filename = location.find_autoloaded_file(const_ref)
+          filename = location.find(filename)
           return build_source(filename) if filename
         end
         nil
@@ -92,7 +95,8 @@ module Rbtype
       end
 
       def define_rails_automatic_module?(name)
-        @rails_autoload_locations.any? { |location| location.matching_folder?(name) }
+        path = ActiveSupport::Inflector.underscore(name.without_explicit_base.to_s)
+        @rails_autoload_locations.any? { |location| location.directory_exist?(path) }
       end
 
       def autoload_constant(const_ref)

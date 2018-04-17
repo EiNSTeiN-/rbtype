@@ -1,7 +1,4 @@
 # frozen_string_literal: true
-require 'bundler'
-require 'bundler/dsl'
-require 'rubygems'
 
 module Rbtype
   module Deps
@@ -19,15 +16,6 @@ module Rbtype
         matching = [wanted, "#{wanted}.rb", "#{wanted}.o", "#{wanted}.so", "#{wanted}.bundle", "#{wanted}.dll"]
         @files.find do |filename|
           matching.include?(filename)
-        end
-      end
-
-      def directory_exist?(name)
-        full_path = expand(name)
-        return false unless full_path.start_with?("#{path}/")
-        full_path = "#{full_path}/" unless full_path.end_with?('/')
-        @files.any? do |filename|
-          filename.start_with?(full_path)
         end
       end
 

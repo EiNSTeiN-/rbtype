@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 require 'bundler'
 require 'bundler/dsl'
-require 'rubygems'
 require_relative 'spec'
 
 module Rbtype
