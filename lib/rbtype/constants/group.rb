@@ -7,7 +7,7 @@ module Rbtype
 
       def initialize(full_path, definitions = nil)
         @full_path = full_path
-        @definitions = definitions || []
+        @definitions = [*definitions]
       end
 
       def name
@@ -15,11 +15,11 @@ module Rbtype
       end
 
       def to_s
-        "#<Group #{full_path} (#{size} definitions)>"
+        "#<#{self.class} #{full_path} (#{size} definitions)>"
       end
 
       def inspect
-        "#<#{self.class} full_path=#{full_path} definitions=#{@definitions}>"
+        "#<#{self.class} full_path=#{full_path} definitions=[#{@definitions.map(&:location).map(&:format).join(', ')}]>"
       end
 
       def [](key)
