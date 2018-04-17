@@ -7,7 +7,7 @@ module Rbtype
       def run
         traverse do |group|
           next unless relevant_group?(group)
-          relevant_definitions = group.reject(&:for_namespacing?)
+          relevant_definitions = group.reject { |defn| namespacing_definition?(defn) }
           next if relevant_definitions.size <= 1
 
           add_error(relevant_definitions.first, message: format(
@@ -25,12 +25,12 @@ module Rbtype
       def relevant_group?(group)
         @lint_all_files ||
           @constants.include?(group.full_path) ||
-          group.to_a.any? { |definition| !definition.for_namespacing? && @files.include?(definition.location.filename) }
+          group.to_a.any? { |definition| !namespacing_definition?(definition) && @files.include?(definition.location.filename) }
       end
 
       def format_definitions(definitions)
         definitions.map do |definition|
-          "#{definition.location.backtrace_line}#{' (for namespacing)' if definition.for_namespacing?}"
+          "#{definition.location.backtrace_line}#{' (for namespacing)' if namespacing_definition?(definition)}"
         end
       end
     end

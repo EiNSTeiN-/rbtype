@@ -16,10 +16,19 @@ module Rbtype
 
       private
 
+      def namespacing_definition?(defn)
+        if !defn.body_node
+          true
+        else
+          body = defn.body_node.type == :begin ? defn.body_node.to_a : [defn.body_node]
+          body.all? { |node| node.type == :class || node.type == :module }
+        end
+      end
+
       def relevant_group?(group)
         @lint_all_files ||
           @constants.include?(group.full_path) ||
-          group.to_a.any? { |definition| !definition.for_namespacing? && @files.include?(definition.location.filename) }
+          group.to_a.any? { |definition| !namespacing_definition?(definition) && @files.include?(definition.location.filename) }
       end
 
       def relevant_filename?(filename)

@@ -71,7 +71,7 @@ module Rbtype
 
       def format_definitions(definitions)
         definitions.map do |definition|
-          "#{definition.backtrace_line}#{' (for namespacing)' if definition.for_namespacing?}"
+          "#{definition.backtrace_line}#{' (for namespacing)' if namespacing_definition?(definition)}"
         end
       end
     end

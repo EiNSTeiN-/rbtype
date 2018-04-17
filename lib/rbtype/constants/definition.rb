@@ -12,12 +12,6 @@ module Rbtype
         @type = type
         @body_node = body_node
         @location = location
-        @for_namespacing = if !@body_node
-          true
-        else
-          body = @body_node.type == :begin ? @body_node.to_a : [@body_node]
-          body.all? { |node| node.type == :class || node.type == :module }
-        end
         freeze
       end
 
@@ -25,16 +19,16 @@ module Rbtype
         path[-1]
       end
 
-      def for_namespacing?
-        @for_namespacing
-      end
-
       def namespaced?
         path.size > 1
       end
 
+      def to_s
+        "#<#{self.class} #{type} #{path}>"
+      end
+
       def inspect
-        "#<Definition #{type} #{path}>"
+        "#<#{self.class} type=#{type} full_path=#{full_path} path=#{path} nesting=[#{@nesting.map(&:full_path).map(&:to_s).join(', ')}]>"
       end
     end
   end
