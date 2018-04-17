@@ -3,7 +3,8 @@ module Rbtype
   module Constants
     class DB
       attr_reader :required_files, :requires, :definitions, :uses, :missings
-      attr_reader :automatic_modules, :autoloaded_constants
+      attr_reader :automatic_modules
+
       def initialize
         @required_files = []
         @requires = []
@@ -40,11 +41,12 @@ module Rbtype
       end
 
       def merge(other)
-        @requires.concat(other.requires)
+        @requires.concat(other.requires.dup)
         merge_group(@definitions, other.definitions)
         merge_group(@uses, other.uses)
         merge_group(@missings, other.missings)
-        @automatic_modules.concat(other.automatic_modules)
+        @automatic_modules.concat(other.automatic_modules.dup)
+        self
       end
 
       private
