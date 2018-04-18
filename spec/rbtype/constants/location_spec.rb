@@ -4,8 +4,16 @@ require 'rbtype'
 describe Rbtype::Constants::Location do
   let(:filename) { '/lib/test.rb' }
   let(:line) { 12 }
-  let(:source_line) { 'class MyClass' }
-  let(:loc) { described_class.new(filename, line, source_line) }
+  let(:source_line) { '    class MyClass' }
+  let(:range) do
+    double(
+      'Parser::Source::Range',
+      line: line,
+      source_line: source_line,
+      source_buffer: double(name: filename)
+    )
+  end
+  let(:loc) { described_class.new(range) }
 
   describe 'format' do
     subject { loc.format }
@@ -14,12 +22,12 @@ describe Rbtype::Constants::Location do
 
   describe 'backtrace_line' do
     subject { loc.backtrace_line }
-    it { expect(subject).to eq "#{filename}:#{line} `#{source_line}`" }
+    it { expect(subject).to eq "#{filename}:#{line} `class MyClass`" }
   end
 
   describe 'to_s' do
     subject { loc.to_s }
-    it { expect(subject).to eq "at #{filename}:#{line} `#{source_line}`" }
+    it { expect(subject).to eq "at #{filename}:#{line} `class MyClass`" }
   end
 
   describe 'inspect' do
@@ -28,20 +36,10 @@ describe Rbtype::Constants::Location do
   end
 
   describe 'from_node' do
-    let(:node) do
-      double(
-        location: double(
-          expression: double(
-            line: 32,
-            source_line: '   class Foo::Bar',
-            source_buffer: double(name: '/lib/my/file.rb')
-          )
-        )
-      )
-    end
+    let(:node) { double(location: double(expression: range)) }
     subject { described_class.from_node(node) }
-    it { expect(subject.line).to eq 32 }
-    it { expect(subject.source_line).to eq 'class Foo::Bar' }
-    it { expect(subject.filename).to eq '/lib/my/file.rb' }
+    it { expect(subject.line).to eq line }
+    it { expect(subject.source_line).to eq 'class MyClass' }
+    it { expect(subject.filename).to eq '/lib/test.rb' }
   end
 end

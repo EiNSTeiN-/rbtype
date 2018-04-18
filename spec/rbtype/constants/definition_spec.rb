@@ -7,7 +7,7 @@ describe Rbtype::Constants::Definition do
   let(:path) { const_ref(:MyClass) }
   let(:type) { :class }
   let(:body_node) { nil }
-  let(:location) { Rbtype::Constants::Location.new("test.rb", 1, "class MyClass") }
+  let(:location) { double('Location', filename: "test.rb", line: 1, source_line: "class MyClass") }
   let(:definition) { described_class.new(parent_nesting, full_path, path, type, body_node, location) }
 
   describe 'to_s' do

@@ -2,12 +2,13 @@
 module Rbtype
   module Constants
     class Location
-      attr_reader :filename, :line, :source_line
+      attr_reader :filename, :line, :source_line, :source_range
 
-      def initialize(filename, line, source_line)
-        @filename = filename
-        @line = line
-        @source_line = source_line
+      def initialize(source_range)
+        @source_range = source_range
+        @filename = source_range.source_buffer.name
+        @line = source_range.line
+        @source_line = source_range.source_line.strip
         freeze
       end
 
@@ -28,8 +29,7 @@ module Rbtype
       end
 
       def self.from_node(node)
-        expr_loc = node.location.expression
-        new(expr_loc.source_buffer.name, expr_loc.line, expr_loc.source_line.strip)
+        new(node.location.expression)
       end
     end
   end
