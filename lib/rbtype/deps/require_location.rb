@@ -5,6 +5,8 @@ module Rbtype
     class RequireLocation
       attr_reader :path, :files
 
+      LOADABLE_EXTENSIONS = ['.rb', '.o', '.so', '.bundle', '.dll']
+
       def initialize(path, files)
         @path = File.expand_path(path)
         @files = Set.new(files.map{ |f| File.expand_path(f) })
@@ -13,7 +15,7 @@ module Rbtype
       def find(name)
         wanted = expand(name)
         return unless wanted.start_with?("#{path}/")
-        matching = [wanted, "#{wanted}.rb", "#{wanted}.o", "#{wanted}.so", "#{wanted}.bundle", "#{wanted}.dll"]
+        matching = [wanted] + LOADABLE_EXTENSIONS.map { |ext| "#{wanted}#{ext}" }
         @files.find do |filename|
           matching.include?(filename)
         end

@@ -6,10 +6,11 @@ module Rbtype
     class RuntimeLoader
       attr_reader :require_failed, :db
       attr_accessor :rails_autoload_locations
+      attr_accessor :diagnostic_engine
 
       class UnsupposedFileFormat < RuntimeError; end
 
-      def initialize(source_set, require_locations, rails_autoload_locations)
+      def initialize(source_set, require_locations, rails_autoload_locations, diagnostic_engine: nil)
         @source_set = source_set
         @require_locations = require_locations
         @rails_autoload_locations = rails_autoload_locations
@@ -19,6 +20,7 @@ module Rbtype
         @db_for_files = {}
         @backtrace = []
         @db = Constants::DB.new
+        @diagnostic_engine = diagnostic_engine
       end
 
       def db_for_file(filename)
@@ -37,14 +39,22 @@ module Rbtype
         end
       end
 
+      def current_location
+        @backtrace.last
+      end
+
       def load_files(files)
         files.each do |filename|
           next if required_file?(filename)
           begin
             source = build_source(filename)
             load_source(source) if source
-          rescue => e
-            puts "#{e.class}: #{e.message}"
+          rescue Parser::SyntaxError => e
+            diag(:error, :source_processing_failed,
+              "An exception occured while parsing %{filename}: %{klass}: %{message}",
+              { exception: e, filename: filename, klass: e.class, message: e.message },
+              current_location
+            )
           end
         end
       end
@@ -57,34 +67,34 @@ module Rbtype
         nil
       end
 
-      def find_source_absolute(base, name)
-        @require_locations.each do |loc|
-          expanded = File.expand_path("#{base}/#{name}")
-          next unless expanded.start_with?(loc.path)
-          filename = loc.find_absolute(expanded)
-          return build_source(filename) if filename
+      def find_source_relative(base, name)
+        expanded = File.expand_path("#{base}/#{name}")
+        possible_filenames = [expanded] + RequireLocation::LOADABLE_EXTENSIONS.map { |ext| "#{expanded}#{ext}" }
+        possible_filenames.each do |filename|
+          return build_source(filename) if File.exist?(filename)
         end
         nil
       end
 
       def find_autoloaded_source(const_ref)
-        filename = ActiveSupport::Inflector.underscore(const_ref.without_explicit_base.to_s)
+        wanted = ActiveSupport::Inflector.underscore(const_ref.without_explicit_base.to_s)
         @rails_autoload_locations.each do |location|
-          filename = location.find(filename)
+          filename = location.find(wanted)
           return build_source(filename) if filename
         end
         nil
       end
 
-      def with_backtrace(line)
-        @backtrace << line
+      def with_backtrace(loc)
+        raise ArgumentError, "expect #{loc} to be `Location` object" unless loc.is_a?(Constants::Location)
+        @backtrace << loc
         yield
       ensure
         @backtrace.pop
       end
 
       def raise_with_backtrace!(e)
-        e.set_backtrace(@backtrace.reverse)
+        e.set_backtrace(@backtrace.reverse.map(&:backtrace_line))
         raise e
       end
 
@@ -115,7 +125,11 @@ module Rbtype
 
       def process_requirement(req)
         unless req.filename
-          puts "#{@backtrace.last}: cannot process #{req.to_s.red}"
+          diag(:error, :require_unparseable,
+            "Require target is not a string: %{source_line}",
+            { requirement: req, source_line: req.location.source_line },
+            req.location
+          )
           return
         end
 
@@ -125,14 +139,22 @@ module Rbtype
           load_from_relative_directory(req)
         end
       rescue UnsupposedFileFormat => e
-        puts "#{@backtrace.last}: #{e.to_s.red}"
+        diag(:error, :unsupported_file_format,
+          "Require target was found but is not a loadable format: %{source_line}",
+          { requirement: req, source_line: req.location.source_line },
+          req.location
+        )
       end
 
       def load_from_require_locations(req)
         return if @provided.include?(req.filename) || @require_failed.key?(req.filename)
         source = find_source(req.filename)
         unless source
-          puts "#{@backtrace.last}: cannot load such file -- #{req.filename}"
+          diag(:error, :file_not_found,
+            "Required file `%{filename}` was not found in any of the require directories",
+            { requirement: req, filename: req.filename },
+            req.location
+          )
           @require_failed[req.filename] = req
           return
         end
@@ -140,9 +162,13 @@ module Rbtype
       end
 
       def load_from_relative_directory(req)
-        source = find_source_absolute(req.relative_directory, req.filename)
+        source = find_source_relative(req.relative_directory, req.filename)
         unless source
-          puts "#{@backtrace.last}: cannot load such file -- #{req.filename} relative to #{req.relative_directory}"
+          diag(:error, :file_not_found,
+            "Required file `%{filename}` was not found relative to %{directory}",
+            { requirement: req, filename: req.filename, directory: req.relative_directory },
+            req.location
+          )
           return
         end
         load_source(source)
@@ -172,6 +198,11 @@ module Rbtype
         yield
       ensure
         @require_loop_detection.delete(source)
+      end
+
+      def diag(level, reason, message, args, location)
+        diag = Diagnostic.new(level, reason, message, args, location)
+        @diagnostic_engine.process(diag)
       end
     end
   end

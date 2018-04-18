@@ -32,6 +32,10 @@ module Rbtype
       @lint_all_files = false
       @require_paths = []
       @rails_autoload_paths = []
+      @diag = Rbtype::DiagnosticEngine.new
+      @diag.consumer = lambda do |diag|
+        puts "#{diag.reason.to_s.red}: #{diag.message}"
+      end
     end
 
     def run(args = ARGV)
@@ -48,10 +52,10 @@ module Rbtype
       end
 
       prepare_cache
-      @source_set = Rbtype::SourceSet.new
+      @source_set = Rbtype::SourceSet.new(diagnostic_engine: @diag)
 
       puts "Loading #{gems.specs.size} gems in the runtime..."
-      @runtime = Deps::RuntimeLoader.new(@source_set, require_locations, [])
+      @runtime = Deps::RuntimeLoader.new(@source_set, require_locations, [], diagnostic_engine: @diag)
       @runtime.provided('thread')
       puts "Loading typedefs..."
       @runtime.load_files(typedefs)

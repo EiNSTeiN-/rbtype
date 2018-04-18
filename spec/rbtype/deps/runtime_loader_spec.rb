@@ -1,7 +1,7 @@
 require 'spec_helper'
 require 'rbtype'
 
-describe Rbtype::Constants::RuntimeLoader do
+describe Rbtype::Deps::RuntimeLoader do
   let(:require_locations) { [] }
   let(:rails_autoload_locations) { [] }
   let(:source_set) { Rbtype::SourceSet.new }
@@ -48,7 +48,6 @@ describe Rbtype::Constants::RuntimeLoader do
       it { expect(subject[0].class).to eq Rbtype::Constants::Requirement }
       it { expect(subject[0].relative_directory).to eq '.' }
       it { expect(subject[0].filename).to eq 'foo' }
-
 
       context 'required' do
         subject do

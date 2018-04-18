@@ -6,6 +6,7 @@ module Rbtype
     include Cacheable
 
     attr_reader :filename, :raw_content
+    attr_accessor :diagnostic_engine
 
     class Builder < ::Parser::Builders::Default
       def n(type, children, source_map)
@@ -13,11 +14,12 @@ module Rbtype
       end
     end
 
-    def initialize(filename, raw_content, parser_klass, relative_path: nil)
+    def initialize(filename, raw_content, parser_klass, relative_path: nil, diagnostic_engine: nil)
       @relative_path = relative_path
       @filename = filename
       @raw_content = raw_content
       @parser_klass = parser_klass
+      @diagnostic_engine = diagnostic_engine
       @ast = nil
       cache_register!
     end
@@ -109,7 +111,11 @@ module Rbtype
       @parser ||= begin
         parser = @parser_klass.new(Builder.new)
         parser.diagnostics.consumer = lambda do |diag|
-          #puts diag.render
+          next unless @diagnostic_engine
+
+          diag = Diagnostic.new(diag.level, diag.reason, diag.message,
+            diag.arguments, Constants::Location.new(diag.location))
+          @diagnostic_engine.process(diag)
         end
         parser
       end

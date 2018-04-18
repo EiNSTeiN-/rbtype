@@ -43,7 +43,7 @@ module Rbtype
       end
 
       def process(node)
-        @runtime_loader.with_backtrace(backtrace_line(node)) do
+        @runtime_loader.with_backtrace(Location.from_node(node)) do
           case node.type
           when :send
             on_send(node)
@@ -143,7 +143,11 @@ module Rbtype
           process_body(body) if body
         end
       rescue Processor::NameError => e
-        puts "#{e}: #{backtrace_line(node)} -- namespace may be incomplete"
+        @runtime_loader.diag(:error, :uninitialized_constant,
+          "Namespace may be incomplete: %{message}",
+          { exception: e, klass: e.class, message: e.message },
+          Location.from_node(node)
+        )
       end
 
       def on_send(node)
