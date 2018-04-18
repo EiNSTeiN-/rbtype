@@ -201,6 +201,7 @@ module Rbtype
       end
 
       def diag(level, reason, message, args, location)
+        return unless @diagnostic_engine
         diag = Diagnostic.new(level, reason, message, args, location)
         @diagnostic_engine.process(diag)
       end

@@ -8,6 +8,7 @@ describe Rbtype::Constants::Processor do
       db: runtime_db,
     )
   end
+  let(:diagnostics) { [] }
   let(:processor) { Rbtype::Deps::Processor.new(source_set, require_locations, rails_autoload_locations) }
   let(:processed_source) { build_processed_source(source, filename: 'test.rb') }
   let(:processor) { described_class.new(runtime_loader, processed_source) }
@@ -17,6 +18,7 @@ describe Rbtype::Constants::Processor do
     allow(runtime_loader).to receive(:with_backtrace) do |line, &block|
       block.call
     end
+    allow(runtime_loader).to receive(:diag) { |*args| diagnostics << args }
   end
 
   describe 'db' do
