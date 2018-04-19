@@ -10,7 +10,7 @@ describe Rbtype::Constants::Location do
       'Parser::Source::Range',
       line: line,
       source_line: source_line,
-      source_buffer: double(name: filename)
+      source_buffer: double(name: filename),
     )
   end
   let(:loc) { described_class.new(range) }

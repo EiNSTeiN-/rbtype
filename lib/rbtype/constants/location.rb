@@ -29,6 +29,7 @@ module Rbtype
       end
 
       def self.from_node(node)
+        return unless node
         new(node.location.expression)
       end
     end

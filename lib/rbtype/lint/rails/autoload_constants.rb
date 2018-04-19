@@ -6,43 +6,48 @@ module Rbtype
   module Lint
     module Rails
       class AutoloadConstants < Base
-        def run
-          @runtime.rails_autoload_locations.each do |loc|
-            loc.files.each do |filename|
-              next unless relevant_filename?(filename)
-              const_name = expected_constant_name(loc.path, filename)
-              return unless db = @runtime.db_for_file(filename)
-              group = find_const_case_insensitive(db.definitions, const_name)
+        class FileGroup
+          def initialize(loc)
+            @loc = loc
+            @files = []
+          end
+        end
 
-              if group == nil
-                add_error(const_name, message: format(
-                  "`%s` is expected to be defined by the file %s "\
-                  "because this file is present in a Rails autoload path "\
-                  "but the constant was not found in any file.\n",
-                  const_name,
-                  filename
-                ))
-              elsif group.size > 1
-                add_error(const_name, message: format(
-                  "`%s` is expected to be defined by the file %s "\
-                  "because this file is present in a Rails autoload path "\
-                  "but we found more than a single definition of this constant, "\
-                  "which may cause autoload problems. This likely means that this constant "\
-                  "conflicts with a constant defined in a gem. Defnitions were:\n",
-                  const_name,
-                  filename,
-                  group.map(&:location).map(&:backtrace_line).join("\n")
-                ))
-              elsif !group.all? { |definition| definition.location.filename == filename }
-                add_error(const_name, message: format(
-                  "`%s` is expected to be defined by the file %s "\
-                  "because this file is present in a Rails autoload path "\
-                  "but we found definitions of this constant in other files. Defnitions were:\n%s\n",
-                  const_name,
-                  filename,
-                  group.map(&:location).map(&:backtrace_line).join("\n")
-                ))
-              end
+        def run
+          files = relevant_files_by_autoload_location
+          files.each do |filename, loc|
+            const_name = expected_constant_name(loc.path, filename)
+            return unless db = @runtime.db_for_file(filename)
+            group = find_const_case_insensitive(db.definitions, const_name)
+
+            if group == nil
+              add_error(const_name, message: format(
+                "`%s` is expected to be defined by the file %s "\
+                "because this file is present in a Rails autoload path "\
+                "but the constant was not found in any file.\n",
+                const_name,
+                filename
+              ))
+            elsif group.size > 1
+              add_error(const_name, message: format(
+                "`%s` is expected to be defined by the file %s "\
+                "because this file is present in a Rails autoload path "\
+                "but we found more than a single definition of this constant, "\
+                "which may cause autoload problems. This likely means that this constant "\
+                "conflicts with a constant defined in a gem. Defnitions were:\n",
+                const_name,
+                filename,
+                group.map(&:location).map(&:backtrace_line).join("\n")
+              ))
+            elsif !group.all? { |definition| definition.location.filename == filename }
+              add_error(const_name, message: format(
+                "`%s` is expected to be defined by the file %s "\
+                "because this file is present in a Rails autoload path "\
+                "but we found definitions of this constant in other files. Defnitions were:\n%s\n",
+                const_name,
+                filename,
+                group.map(&:location).map(&:backtrace_line).join("\n")
+              ))
             end
           end
         end
@@ -65,6 +70,23 @@ module Rbtype
             return value if key.to_s.downcase == wanted
           end
           nil
+        end
+
+        def relevant_files_by_autoload_location
+          files = {}
+          @runtime.rails_autoload_locations.each do |loc|
+            loc.files.each do |filename|
+              next unless relevant_filename?(filename)
+              if files[filename]
+                if loc.path.size > files[filename].path.size
+                  files[filename] = loc
+                end
+              else
+                files[filename] = loc
+              end
+            end
+          end
+          files
         end
       end
     end

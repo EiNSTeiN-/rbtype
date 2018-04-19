@@ -5,7 +5,8 @@ module Rbtype
       attr_reader :required_files, :requires, :definitions, :uses, :missings
       attr_reader :automatic_modules
 
-      def initialize
+      def initialize(parent = nil)
+        @parent = parent
         @required_files = []
         @requires = []
         @definitions = {}
@@ -15,28 +16,33 @@ module Rbtype
       end
 
       def add_use(use)
+        @parent&.add_use(use)
         @uses[use.full_path] ||= Group.new(use.full_path)
         @uses[use.full_path] << use
       end
 
       def add_definition(definition)
+        @parent&.add_definition(definition)
         path = definition.full_path
         @definitions[path] ||= Group.new(path)
         @definitions[path] << definition
       end
 
       def add_automatic_module(const_ref)
+        @parent&.add_automatic_module(const_ref)
         @automatic_modules << const_ref
         @definitions[const_ref] ||= Group.new(const_ref)
       end
 
       def add_missing_constant(missing_constant)
+        @parent&.add_missing_constant(missing_constant)
         path = missing_constant.full_path
         @missings[path] ||= Group.new(path)
         @missings[path] << missing_constant
       end
 
       def add_require(req)
+        @parent&.add_require(req)
         @requires << req
       end
 

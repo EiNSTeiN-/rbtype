@@ -14,7 +14,19 @@ module Rbtype
     class ExitWithFailure < RuntimeError; end
     class ExitWithSuccess < RuntimeError; end
 
+    class GemRequirement < Struct.new(:filename)
+      def method
+        :require
+      end
+
+      def argument_node
+        nil
+      end
+    end
+
     GEM_CACHE_NAME = 'global-gem-cache'
+    DEFAULT_DIAGNOSTIC_LEVELS = ['warning', 'error', 'fatal']
+    DEFAULT_SUPPRESSED_DIAGNOSTICS = ['invalid_encoding']
 
     ACTIONS = {
       definitions: Rbtype::CLI::Definitions,
@@ -32,20 +44,22 @@ module Rbtype
       @lint_all_files = false
       @require_paths = []
       @rails_autoload_paths = []
+      @diagnostic_levels = DEFAULT_DIAGNOSTIC_LEVELS
+      @suppressed_diagnostics = DEFAULT_SUPPRESSED_DIAGNOSTICS
       @diag = Rbtype::DiagnosticEngine.new
       @diag.consumer = lambda do |diag|
-        puts "#{diag.reason.to_s.red}: #{diag.message}"
+        next unless @diagnostic_levels.include?(diag.level.to_s)
+        next if @suppressed_diagnostics.include?(diag.reason.to_s)
+        puts diag.render.join("\n")
       end
     end
 
     def run(args = ARGV)
       load_options(args)
 
-      if files.empty? && constants.empty?
+      if expanded_files.empty? && constants.empty?
         success!("specify either --file or --const...\n#{option_parser}")
       end
-
-      ensure_files_exist
 
       if @actions.empty?
         success!("no actions to perform...\n#{option_parser}")
@@ -61,26 +75,16 @@ module Rbtype
       @runtime.load_files(typedefs)
       puts "Requiring gems..."
       ordered_requires.each do |name|
-        line = "require '#{name}'"
-        puts "`#{line.green}`"
-        begin
-          source = @runtime.find_source(name)
-          if source
-            @runtime.load_source(source)
-          else
-            puts "cannot load such file -- #{name}"
-          end
-        rescue Deps::RuntimeLoader::UnsupposedFileFormat => e
-          puts "#{e.class}: #{e.message.red}"
-        end
+        @runtime.process_requirement(GemRequirement.new(name))
       end
       puts "Done!"
 
+      puts "Configuring #{rails_autoload_locations.size} autoload paths"
       @runtime.rails_autoload_locations = rails_autoload_locations
 
-      if files.size > 0
-        puts "Loading #{files.size} files"
-        @runtime.load_files(files)
+      if expanded_files.size > 0
+        puts "Loading #{expanded_files.size} files"
+        @runtime.load_files(expanded_files)
         puts "Done!"
       end
 
@@ -126,7 +130,7 @@ module Rbtype
 
     def rails_autoload_locations
       @rails_autoload_locations ||= begin
-        @rails_autoload_paths.map do |path|
+        expanded_autoload_paths.map do |path|
           files = Dir["#{path}/**/*"].select { |filename| File.file?(filename) }
           Deps::RailsAutoloadLocation.new(path, files)
         end
@@ -145,7 +149,7 @@ module Rbtype
     end
 
     def explicit_require_locations
-      @require_paths.map do |path|
+      expanded_require_paths.map do |path|
         expanded = File.expand_path(path)
         files = Dir["#{expanded}/**/*"].select { |filename| File.file?(filename) }
         Deps::RequireLocation.new(path, files)
@@ -181,7 +185,7 @@ module Rbtype
     end
 
     def action_options
-      { constants: constants, files: files, lint_all_files: @lint_all_files }
+      { constants: constants, files: expanded_files, lint_all_files: @lint_all_files }
     end
 
     def run_action(name)
@@ -199,8 +203,22 @@ module Rbtype
       option_parser.parse!(args)
     end
 
-    def files
-      @files
+    def expanded_autoload_paths
+      @expanded_autoload_paths ||= @rails_autoload_paths
+        .map { |f| Dir[f] }.flatten
+        .map { |f| File.expand_path(f, Dir.pwd) }
+        .select { |f| File.directory?(f) }
+    end
+
+    def expanded_require_paths
+      @expanded_require_paths ||= @require_paths
+        .map { |f| Dir[f] }.flatten
+        .map { |f| File.expand_path(f, Dir.pwd) }
+        .select { |f| File.directory?(f) }
+    end
+
+    def expanded_files
+      @expanded_files ||= @files
         .map { |f| Dir[f] }.flatten
         .map { |f| File.expand_path(f, Dir.pwd) }
         .select { |f| f.end_with?('.rb') && File.file?(f) }
@@ -225,20 +243,23 @@ module Rbtype
       raise ExitWithSuccess, msg
     end
 
-    def ensure_files_exist
-      files.each do |filename|
-        unless File.exist?(filename)
-          failure!("#{filename}: does not exist")
-        end
-      end
-    end
-
     def option_parser
       OptionParser.new do |opts|
         opts.banner = "Usage: rbtype [options] [target, ...]"
 
         opts.on("--file [file]", "Files to parse") do |config|
           @files << config
+        end
+
+        opts.on("--level [level]", "Comma separated list of diagnostic messages to print. "\
+            "For exampe --level error,fatal. Possible levels: #{Diagnostic::LEVELS.join(',')}. "\
+            "Defaults to: #{DEFAULT_DIAGNOSTIC_LEVELS}.") do |config|
+          @diagnostic_levels = config.split(',')
+        end
+
+        opts.on("--silence [names]", "Suppress diagnostic messages."\
+            "For exampe --silence require_unparseable,unsupported_file_format.") do |config|
+          @suppressed_diagnostics = config.split(',')
         end
 
         opts.on("--const [const]", "Constants to run actions against") do |config|
@@ -256,12 +277,12 @@ module Rbtype
         end
 
         opts.on("--require-path [pathname]", "Files to parse") do |config|
-          @require_paths << config
+          @require_paths.concat(config.split(':'))
         end
 
         opts.on("--rails-autoload-paths [pathname]", "Directories that are registered "\
             "with Rails autoload functionality and obey autloading rules") do |config|
-          @rails_autoload_paths.concat(config.split(' '))
+          @rails_autoload_paths.concat(config.split(':'))
         end
 
         opts.on_tail("-h", "--help", "Show this message") do

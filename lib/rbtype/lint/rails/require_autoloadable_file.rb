@@ -8,6 +8,7 @@ module Rbtype
       class RequireAutoloadableFile < Base
         def run
           @runtime.db.requires.each do |requirement|
+            next unless [:require, :require_relative].include?(requirement.method)
             next unless relevant_filename?(requirement.location.filename)
             next unless requirement.resolved_filename
             next unless (loc = find_autoload_location(requirement.resolved_filename))

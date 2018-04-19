@@ -16,7 +16,7 @@ module Rbtype
         @runtime_loader = runtime_loader
         @parents = []
         @source = source
-        @db = DB.new
+        @db = DB.new(@runtime_loader.db)
         process_body(source.ast)
       end
 
@@ -143,10 +143,10 @@ module Rbtype
           process_body(body) if body
         end
       rescue Processor::NameError => e
-        @runtime_loader.diag(:error, :uninitialized_constant,
+        @runtime_loader.diag(:warning, :uninitialized_constant,
           "Namespace may be incomplete: %{message}",
           { exception: e, klass: e.class, message: e.message },
-          Location.from_node(node)
+          Location.from_node(node.children[0])
         )
       end
 

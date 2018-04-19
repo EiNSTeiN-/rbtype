@@ -76,8 +76,12 @@ module Rbtype
         nil
       end
 
-      def find_autoloaded_source(const_ref)
+      def find_autoloaded_constant(const_ref)
         wanted = ActiveSupport::Inflector.underscore(const_ref.without_explicit_base.to_s)
+        find_autoloaded_source(wanted)
+      end
+
+      def find_autoloaded_source(wanted)
         @rails_autoload_locations.each do |location|
           filename = location.find(wanted)
           return build_source(filename) if filename
@@ -110,7 +114,7 @@ module Rbtype
       end
 
       def autoload_constant(const_ref)
-        source = find_autoloaded_source(const_ref)
+        source = find_autoloaded_constant(const_ref)
         if source
           load_source(source)
           @db.definitions[const_ref]
@@ -125,24 +129,27 @@ module Rbtype
 
       def process_requirement(req)
         unless req.filename
-          diag(:error, :require_unparseable,
-            "Require target is not a string: %{source_line}",
-            { requirement: req, source_line: req.location.source_line },
-            req.location
+          diag(:warning, :require_unparseable,
+            "Require target is not a string, and therefore cannot be loaded",
+            { requirement: req },
+            Constants::Location.from_node(req.argument_node)
           )
           return
         end
 
-        if req.method == :require
+        case req.method
+        when :require
           load_from_require_locations(req)
-        else
+        when :require_dependency
+          load_from_autoload_locations(req)
+        when :require_relative
           load_from_relative_directory(req)
         end
       rescue UnsupposedFileFormat => e
-        diag(:error, :unsupported_file_format,
-          "Require target was found but is not a loadable format: %{source_line}",
-          { requirement: req, source_line: req.location.source_line },
-          req.location
+        diag(:warning, :unsupported_file_format,
+          "Require target was found but is not a loadable format",
+          { requirement: req },
+          Constants::Location.from_node(req.argument_node)
         )
       end
 
@@ -151,9 +158,24 @@ module Rbtype
         source = find_source(req.filename)
         unless source
           diag(:error, :file_not_found,
-            "Required file `%{filename}` was not found in any of the require directories",
-            { requirement: req, filename: req.filename },
-            req.location
+            "Required file was not found in any of the require paths",
+            { requirement: req },
+            Constants::Location.from_node(req.argument_node)
+          )
+          @require_failed[req.filename] = req
+          return
+        end
+        load_source(source)
+      end
+
+      def load_from_autoload_locations(req)
+        return if @provided.include?(req.filename) || @require_failed.key?(req.filename)
+        source = find_autoloaded_source(req.filename)
+        unless source
+          diag(:error, :file_not_found,
+            "Required file was not found in any of the autoload paths",
+            { requirement: req },
+            Constants::Location.from_node(req.argument_node)
           )
           @require_failed[req.filename] = req
           return
@@ -165,9 +187,9 @@ module Rbtype
         source = find_source_relative(req.relative_directory, req.filename)
         unless source
           diag(:error, :file_not_found,
-            "Required file `%{filename}` was not found relative to %{directory}",
-            { requirement: req, filename: req.filename, directory: req.relative_directory },
-            req.location
+            "Required file was not found relative to %{directory}",
+            { requirement: req, directory: req.relative_directory },
+            Constants::Location.from_node(req.argument_node)
           )
           return
         end
@@ -186,7 +208,6 @@ module Rbtype
 
         require_loop_detection(source) do
           processor = Constants::Processor.new(self, source)
-          @db.merge(processor.db)
           @db.required_files << source.filename
           @db_for_files[source.filename] = processor.db
           source.filename
