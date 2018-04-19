@@ -24,7 +24,7 @@ module Rbtype
 
       def processable_node?(node)
         node.is_a?(::AST::Node) &&
-          [:send, :class, :module].include?(node.type)
+          [:send, :class, :module, :casgn].include?(node.type)
       end
 
       def process_body(node)
@@ -49,6 +49,8 @@ module Rbtype
             on_send(node)
           when :class, :module
             on_module(node)
+          when :casgn
+            on_casgn(node)
           end
         end
       end
@@ -142,6 +144,36 @@ module Rbtype
           body = node.type == :module ? node.children[1] : node.children[2]
           process_body(body) if body
         end
+      rescue Processor::NameError => e
+        @runtime_loader.diag(:warning, :uninitialized_constant,
+          "Namespace may be incomplete: %{message}",
+          { exception: e, klass: e.class, message: e.message },
+          Location.from_node(node.children[0])
+        )
+      end
+
+      def on_casgn(node)
+        base = Constants::ConstReference.from_node(node.children[0]) if node.children[0]
+        name = Constants::ConstReference.new([node.children[1]])
+        if base && base == Constants::ConstReference.base
+          full_path = Constants::ConstReference.base
+        else
+          group = definition_group(node, base) if base
+          full_path = group&.full_path || parent&.full_path || Constants::ConstReference.base
+        end
+        assignment = Assignment.new(
+          parent&.nesting,
+          full_path.join(name),
+          base ? base.join(name) : name,
+          node.children[2],
+          Location.from_node(node),
+        )
+        @db.add_definition(assignment)
+
+        #with_parent(definition) do
+        #  body = node.type == :module ? node.children[1] : node.children[2]
+        #  process_body(body) if body
+        #end
       rescue Processor::NameError => e
         @runtime_loader.diag(:warning, :uninitialized_constant,
           "Namespace may be incomplete: %{message}",

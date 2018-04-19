@@ -289,6 +289,43 @@ describe Rbtype::Constants::Processor do
       end
     end
 
+    context 'simple constant assignment works' do
+      let(:source) { <<~RUBY }
+        A = Class.new
+      RUBY
+      it { expect(subject.uses.size).to eq 0 }
+      it { expect(subject.definitions.size).to eq 1 }
+      it { expect(subject.missings.size).to eq 0 }
+      it do
+        expect_defined('::A')
+      end
+    end
+
+    context 'constant assignment with resolution' do
+      let(:source) { <<~RUBY }
+        module A; end
+        A::B = Class.new
+      RUBY
+      it { expect(subject.uses.size).to eq 1 }
+      it { expect(subject.definitions.size).to eq 2 }
+      it { expect(subject.missings.size).to eq 0 }
+      it do
+        expect_defined('::A')
+      end
+    end
+
+    context 'constant assignment on cbase' do
+      let(:source) { <<~RUBY }
+        ::A = Class.new
+      RUBY
+      it { expect(subject.uses.size).to eq 0 }
+      it { expect(subject.definitions.size).to eq 1 }
+      it { expect(subject.missings.size).to eq 0 }
+      it do
+        expect_defined('::A')
+      end
+    end
+
     private
 
     def expect_used(name)

@@ -9,6 +9,7 @@ require 'rbtype/constants/missing_constant'
 require 'rbtype/constants/db'
 require 'rbtype/constants/requirement'
 require 'rbtype/constants/location'
+require 'rbtype/constants/assignment'
 
 require 'rbtype/deps/gems'
 require 'rbtype/deps/spec'
