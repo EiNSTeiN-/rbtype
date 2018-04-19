@@ -9,6 +9,8 @@ module Rbtype
     attr_accessor :diagnostic_engine
 
     class Builder < ::Parser::Builders::Default
+      modernize
+
       def n(type, children, source_map)
         Rbtype::AST::Node.new(type, children, location: source_map)
       end

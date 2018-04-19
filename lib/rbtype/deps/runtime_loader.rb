@@ -147,7 +147,7 @@ module Rbtype
         end
       rescue UnsupposedFileFormat => e
         diag(:warning, :unsupported_file_format,
-          "Require target was found but is not a loadable format",
+          "'#{req.filename}' was found but is not a loadable format",
           { requirement: req },
           Constants::Location.from_node(req.argument_node)
         )
@@ -158,7 +158,7 @@ module Rbtype
         source = find_source(req.filename)
         unless source
           diag(:error, :file_not_found,
-            "Required file was not found in any of the require paths",
+            "'#{req.filename}' was not found in any of the require paths",
             { requirement: req },
             Constants::Location.from_node(req.argument_node)
           )
@@ -173,7 +173,7 @@ module Rbtype
         source = find_autoloaded_source(req.filename)
         unless source
           diag(:error, :file_not_found,
-            "Required file was not found in any of the autoload paths",
+            "'#{req.filename}' was not found in any of the autoload paths",
             { requirement: req },
             Constants::Location.from_node(req.argument_node)
           )
@@ -187,7 +187,7 @@ module Rbtype
         source = find_source_relative(req.relative_directory, req.filename)
         unless source
           diag(:error, :file_not_found,
-            "Required file was not found relative to %{directory}",
+            "'#{req.filename}' was not found relative to %{directory}",
             { requirement: req, directory: req.relative_directory },
             Constants::Location.from_node(req.argument_node)
           )
