@@ -15,7 +15,8 @@ module Rbtype
       def find(name)
         wanted = expand(name)
         return unless wanted.start_with?("#{path}/")
-        matching = [wanted] + LOADABLE_EXTENSIONS.map { |ext| "#{wanted}#{ext}" }
+        without_ext = chomp_extension(wanted)
+        matching = [wanted, without_ext] + LOADABLE_EXTENSIONS.map { |ext| "#{without_ext}#{ext}" }
         @files.find do |filename|
           matching.include?(filename)
         end
@@ -38,6 +39,13 @@ module Rbtype
         else
           File.expand_path(name, path)
         end
+      end
+
+      def chomp_extension(fullpath)
+        ext = File.extname(fullpath)
+        dir = File.dirname(fullpath)
+        filename = File.basename(fullpath, ext)
+        File.join(dir, filename)
       end
     end
   end

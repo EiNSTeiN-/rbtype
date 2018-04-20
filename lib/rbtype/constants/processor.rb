@@ -183,8 +183,9 @@ module Rbtype
       end
 
       def on_send(node)
+        receiver = node.children[0]
         message = node.children[1]
-        return unless [:require, :require_relative, :require_dependency].include?(message) && parent.nil?
+        return unless [:require, :require_relative, :require_dependency].include?(message) && receiver.nil?
         req = Requirement.new(node)
         @db.add_require(req)
         resolved_filename = @runtime_loader.process_requirement(req)
