@@ -127,6 +127,22 @@ module Rbtype
         @db.required_files.include?(filename)
       end
 
+      def process_gem_requirement(filename)
+        alt_filename = filename.gsub('-', '/')
+        source = find_source(filename) || find_source(alt_filename)
+        if source
+          load_source(source)
+        else
+          diag(:error, :file_not_found,
+            "'#{filename}' or '#{alt_filename}' were not found in any of the require paths",
+            { filename: filename })
+        end
+      rescue UnsupposedFileFormat => e
+        diag(:warning, :unsupported_file_format,
+          "'#{filename}' was found but is not a loadable format",
+          { filename: filename })
+      end
+
       def process_requirement(req)
         unless req.filename
           diag(:warning, :require_unparseable,
@@ -221,7 +237,7 @@ module Rbtype
         @require_loop_detection.delete(source)
       end
 
-      def diag(level, reason, message, args, location)
+      def diag(level, reason, message, args, location = nil)
         return unless @diagnostic_engine
         diag = Diagnostic.new(level, reason, message, args, location)
         @diagnostic_engine.process(diag)

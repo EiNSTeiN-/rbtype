@@ -17,6 +17,7 @@ module Rbtype
       private
 
       def namespacing_definition?(defn)
+        return false unless defn.is_a?(Constants::Definition)
         if !defn.body_node
           true
         else

@@ -7,8 +7,19 @@ module Rbtype
       def run
         traverse do |group|
           group.each do |definition|
+            next unless relevant_filename?(definition.location.filename)
+
             actual_path = definition.full_path
-            parts = definition.nesting.reverse.map(&:path)
+            parts = if definition.is_a?(Constants::Definition)
+              definition.nesting.reverse.map(&:path)
+            elsif definition.is_a?(Constants::Assignment)
+              base = if definition.parent_nesting
+                definition.parent_nesting.reverse.map(&:path) + [definition.path]
+              else
+                [definition.path]
+              end
+            end
+            next unless parts
             lexical_path = parts.reduce(Constants::ConstReference.base) { |current, other| current.join(other) }
             if lexical_path != actual_path
               add_error(definition, message: format(

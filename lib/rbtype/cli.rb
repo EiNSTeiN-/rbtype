@@ -41,6 +41,7 @@ module Rbtype
       @actions = []
       @constants = []
       @files = []
+      @excluded_files = []
       @lint_all_files = false
       @require_paths = []
       @rails_autoload_paths = []
@@ -57,7 +58,9 @@ module Rbtype
     def run(args = ARGV)
       load_options(args)
 
-      if expanded_files.empty? && constants.empty?
+      files = expanded_files - expanded_excluded_files
+
+      if files.empty? && constants.empty?
         success!("specify either --file or --const...\n#{option_parser}")
       end
 
@@ -75,16 +78,16 @@ module Rbtype
       @runtime.load_files(typedefs)
       puts "Requiring gems..."
       ordered_requires.each do |name|
-        @runtime.process_requirement(GemRequirement.new(name))
+        @runtime.process_gem_requirement(name)
       end
       puts "Done!"
 
       puts "Configuring #{rails_autoload_locations.size} autoload paths"
       @runtime.rails_autoload_locations = rails_autoload_locations
 
-      if expanded_files.size > 0
-        puts "Loading #{expanded_files.size} files"
-        @runtime.load_files(expanded_files)
+      if files.size > 0
+        puts "Loading #{files.size} files"
+        @runtime.load_files(files)
         puts "Done!"
       end
 
@@ -224,6 +227,13 @@ module Rbtype
         .select { |f| f.end_with?('.rb') && File.file?(f) }
     end
 
+    def expanded_excluded_files
+      @expanded_excluded_files ||= @excluded_files
+        .map { |f| Dir[f] }.flatten
+        .map { |f| File.expand_path(f, Dir.pwd) }
+        .select { |f| f.end_with?('.rb') && File.file?(f) }
+    end
+
     def constants
       @constants.map do |name|
         ref = Constants::ConstReference.from_string(name)
@@ -247,8 +257,12 @@ module Rbtype
       OptionParser.new do |opts|
         opts.banner = "Usage: rbtype [options] [target, ...]"
 
-        opts.on("--file [file]", "Files to parse") do |config|
+        opts.on("--file [file]", "Files to parse. Globs can be used to match files, like --file 'lib/**/*.rb'.") do |config|
           @files << config
+        end
+
+        opts.on("--exclude [file]", "Files to exclude regardless of whether --file matches them.") do |config|
+          @excluded_files << config
         end
 
         opts.on("--level [level]", "Comma separated list of diagnostic messages to print. "\
