@@ -201,7 +201,7 @@ describe Rbtype::Processors::TypeIdentity do
   context "__FILE__" do
     let(:source) { "__FILE__" }
 
-    it { expect(subject.type).to eq :str }
+    it { expect(subject.type).to eq :__FILE__ }
     it { expect(subject.type_identity).to eq instance_of(string_class_ref) }
   end
 

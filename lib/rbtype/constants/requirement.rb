@@ -1,4 +1,6 @@
 # frozen_string_literal: true
+require 'rbtype/processors/require_location_finder'
+
 module Rbtype
   module Constants
     class Requirement
@@ -29,9 +31,18 @@ module Rbtype
         argument_node.type == :str && argument_node.children.size == 1
       end
 
+      def simplify_to_string
+        node = Rbtype::AST::Processor.new([Processors::RequireLocationFinder.new]).process(argument_node)
+        node.children[0] if node && node.type == :str
+      end
+
       def filename
         return @filename if defined?(@filename)
-        @filename ||= argument_node.children[0] if string?
+        @filename = if string?
+          argument_node.children[0]
+        else
+          simplify_to_string
+        end
       end
 
       def to_s

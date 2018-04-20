@@ -111,7 +111,9 @@ module Rbtype
 
     def parser
       @parser ||= begin
-        parser = @parser_klass.new(Builder.new)
+        builder = Builder.new
+        builder.emit_file_line_as_literals = false
+        parser = @parser_klass.new(builder)
         parser.diagnostics.consumer = lambda do |diag|
           next unless @diagnostic_engine
 

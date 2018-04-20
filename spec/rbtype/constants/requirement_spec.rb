@@ -56,6 +56,14 @@ describe Rbtype::Constants::Requirement do
       let(:node) { s(:send, nil, :require, s(:lvar, :foo)) }
       it { expect(subject).to eq nil }
     end
+
+    context 'when argument is a function of File' do
+      let(:processed_source) { Rbtype::ProcessedSource.new('/lib/my/file.rb', source, Parser::Ruby24) }
+      let(:node) { processed_source.ast }
+
+      let(:source) { "require File.expand_path('colorize/class_methods', File.dirname(__FILE__))" }
+      it { expect(subject).to eq '/lib/my/colorize/class_methods' }
+    end
   end
 
   describe 'to_s' do

@@ -1,6 +1,6 @@
 module Rbtype
   module Processors
-    class TaggerBase < ::Parser::AST::Processor
+    class TaggerBase
       def updated(node, new_properties)
         node.class.new(
           node.type,
