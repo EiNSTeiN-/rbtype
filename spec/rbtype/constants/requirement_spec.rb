@@ -61,8 +61,15 @@ describe Rbtype::Constants::Requirement do
       let(:processed_source) { Rbtype::ProcessedSource.new('/lib/my/file.rb', source, Parser::Ruby24) }
       let(:node) { processed_source.ast }
 
-      let(:source) { "require File.expand_path('colorize/class_methods', File.dirname(__FILE__))" }
-      it { expect(subject).to eq '/lib/my/colorize/class_methods' }
+      context 'expand path in relation to dirname' do
+        let(:source) { "require File.expand_path('colorize/class_methods', File.dirname(__FILE__))" }
+        it { expect(subject).to eq '/lib/my/colorize/class_methods' }
+      end
+
+      context 'dirname added to constant string' do
+        let(:source) { "require File.dirname(__FILE__) + '/../impertinent'" }
+        it { expect(subject).to eq '/lib/my/../impertinent' }
+      end
     end
   end
 
